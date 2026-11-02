@@ -4,11 +4,9 @@ import { planMrp } from "../../domain/mrp/plan-mrp";
 import { scheduleProposal } from "../../domain/mrp/sizing/schedule-proposal";
 import { formatDecimal } from "../../domain/quantities/decimal";
 import { ConflictError, NotFoundError } from "../../http/errors";
-import { parseInput } from "../../http/parse-input";
-import { requisitionCreateSchema } from "../../validators/purchasing/purchase-requisition.schema";
 import type { AuditActor } from "../audit/actor";
-import { findMaterial } from "../materials/find-material";
-import type { PurchaseRequisitionService, RequisitionView } from "../purchase-requisitions/purchase-requisition.service";
+import type { RequisitionView } from "../purchase-requisitions/purchase-requisition.service";
+import type { MrpProposalDocumentService } from "./mrp-proposal-document.service";
 import type { MrpSnapshotService } from "./mrp-snapshot.service";
 import { MRP_RUN_NOT_FOUND } from "./mrp-run.service";
 import type { MrpProposalView } from "./mrp-run-view";
@@ -39,7 +37,7 @@ export interface MrpAcceptanceView {
 interface Deps {
   em: EntityManager;
   mrpSnapshotService: MrpSnapshotService;
-  purchaseRequisitionService: PurchaseRequisitionService;
+  mrpProposalDocumentService: MrpProposalDocumentService;
 }
 
 const notFound = () => new NotFoundError("MRP_PROPOSAL_NOT_FOUND", MRP_PROPOSAL_NOT_FOUND);
@@ -56,12 +54,12 @@ const stale = (pair?: { material: string; location: string }) =>
 export class MrpAcceptanceService {
   private readonly em: EntityManager;
   private readonly mrpSnapshotService: MrpSnapshotService;
-  private readonly purchaseRequisitionService: PurchaseRequisitionService;
+  private readonly mrpProposalDocumentService: MrpProposalDocumentService;
 
-  constructor({ em, mrpSnapshotService, purchaseRequisitionService }: Deps) {
+  constructor({ em, mrpSnapshotService, mrpProposalDocumentService }: Deps) {
     this.em = em;
     this.mrpSnapshotService = mrpSnapshotService;
-    this.purchaseRequisitionService = purchaseRequisitionService;
+    this.mrpProposalDocumentService = mrpProposalDocumentService;
   }
 
   /**
@@ -104,11 +102,8 @@ export class MrpAcceptanceService {
       throw stale(proposal);
     }
 
-    const { baseUnit } = await findMaterial(this.em, material);
-    const input = parseInput(requisitionCreateSchema, { material, location, quantity, unit: baseUnit, requiredDate: needDate });
-    const document = await this.purchaseRequisitionService.create(input, actor, { mrpRun: run.code });
-    proposal.acceptedDocument = document.id;
-    await this.em.flush();
+    // The document and the proposal's mark, as the automatic batch creates them (E19-S03).
+    const document = await this.mrpProposalDocumentService.create(run.code, { id: proposal.id, kind, material, location, needDate, quantity }, actor);
     return {
       proposal: {
         id: proposal.id, run: run.code, material, location, kind, needDate, quantity,

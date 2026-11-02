@@ -1,4 +1,4 @@
-import type { AuditChannel, MrpRecommendationKind, MrpRun, MrpRunMode } from "@cpg/db";
+import type { AuditChannel, MrpRecommendationKind, MrpRun, MrpRunCreation, MrpRunMode } from "@cpg/db";
 import { addDays } from "../../domain/demand/demand-buckets";
 import type { MrpBucket, MrpProposalTiming } from "../../domain/mrp/mrp-result";
 import type { ReadProvisional } from "../../domain/mrp/provisional/stored-provisional";
@@ -42,7 +42,25 @@ export interface MrpRunView {
   horizonDays: number;
   /** Planned material-location pairs. */
   pairs: number;
+  /**
+   * What an automatic run's batch did (E19-S03): `{ status: "created", documents }`, or `{ status: "failed", … }`
+   * naming the refusal and its candidate. `null` for a manual run, and for a run stored before E19-S03.
+   */
+  creation: MrpRunCreation | null;
 }
+
+/** One document an automatic run's batch created (E19-S03): the proposal it came from, its kind and its business ID. */
+export interface MrpCreatedDocumentView {
+  proposal: string;
+  kind: MrpRecommendationKind;
+  id: string;
+}
+
+/**
+ * What starting a run answers (E19-S03, spec Q7): the run, and for an automatic run every document its batch
+ * created, in candidate order (empty when the batch failed). A manual run's answer has no `documents`.
+ */
+export type MrpRunAnswer = MrpRunView & { documents?: MrpCreatedDocumentView[] };
 
 /** One planned day: six-decimal texts in the base unit, signed where a balance is negative. */
 export type MrpBucketView = { date: string } & Record<MrpFigure, string>;
@@ -162,5 +180,7 @@ export function toRunView(run: MrpRun): MrpRunView {
     endDate: addDays(run.startDate, run.horizonDays - 1),
     horizonDays: run.horizonDays,
     pairs: run.pairs,
+    // An entity created in this request has the property unset, and an older image's row reads null (lesson 2026-10-19).
+    creation: run.creation ?? null,
   };
 }

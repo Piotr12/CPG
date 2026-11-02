@@ -2,15 +2,17 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
-import { initOrm, type Orm } from "@cpg/db";
+import { holdWriteGate, initOrm, MrpRecommendation, MrpRun, type MrpRunCreation, type Orm } from "@cpg/db";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "../../config";
 import { createAppContainer } from "../../container/container";
+import type { AppContainer } from "../../container/cradle";
 import { scopeForTenant } from "../../container/tenant-scope";
 import { migrateDatabase, toDbOptions } from "../../database";
 import { planMrp } from "../../domain/mrp/plan-mrp";
 import { inRequestTransaction } from "../../http/request-transaction";
 import type { AuditActor } from "../audit/actor";
+import { MRP_BATCH_LIMIT } from "./mrp-batch.service";
 
 /*
  * An MRP run at the realistic Test dataset's size as #261 left it (30 materials at one location, 7,800
@@ -71,6 +73,9 @@ const FULL_ORDER_LINES = 100;
 const COMPONENTS = 4;
 /** The spec's bound on the longest stretch a ten-times run keeps the event loop from reading sockets. */
 const STALL_BUDGET_MS = 250;
+/** E19-S03 Q13: an automatic run on the realistic fixture, plan and batch together, and a batch of exactly the cap's candidates. */
+const AUTOMATIC_BUDGET_MS = 3_000;
+const BATCH_AT_CAP_BUDGET_MS = 15_000;
 /**
  * The CI bounds: the assertions are far looser than the budgets, which this test checks on the figures
  * it prints when run alone. Under the parallel coverage run on a CI runner a read took ~10× longer than
@@ -166,6 +171,7 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
   let run: () => Promise<unknown>;
   let engineOnly: () => Promise<number>;
   let accept: (run: string, proposal: string) => Promise<unknown>;
+  let rolledBack: <T>(work: (cradle: AppContainer["cradle"]) => Promise<T>) => Promise<T>;
   const testTimeout = 2 * RUNS * CI_FACTOR * size.budgetMs + 60_000;
 
   beforeAll(async () => {
@@ -184,6 +190,19 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     accept = async (runId, proposal) => {
       const { cradle } = await scopeForTenant(container, "prod");
       return inRequestTransaction(cradle.em, () => cradle.mrpAcceptanceService.accept(runId, proposal, ACTOR));
+    };
+    // Work timed in a transaction that is then rolled back, so every attempt starts from the same data (E19-S03).
+    const ROLLBACK = new Error("roll back the timed work");
+    rolledBack = async (work) => {
+      const { cradle } = await scopeForTenant(container, "prod");
+      let result!: Awaited<ReturnType<typeof work>>;
+      await inRequestTransaction(cradle.em, async () => {
+        result = await work(cradle);
+        throw ROLLBACK;
+      }).catch((error: unknown) => {
+        if (error !== ROLLBACK) throw error;
+      });
+      return result;
     };
     // The engine is one synchronous call, so its own time is a stall the heartbeat also counts (#275).
     engineOnly = async () => {
@@ -315,6 +334,32 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     expect(longestStall).toBeLessThan(CI_FACTOR * STALL_BUDGET_MS);
   }, testTimeout);
 
+  it("runs automatically, creating every Buy proposal in one batch, within its budget (E19-S03 Q13)", async () => {
+    const outcomes: MrpRunCreation[] = [];
+    let candidates = 0;
+    const { fastest, longestStall } = await measure(async () => {
+      const view = await rolledBack(async (cradle) => {
+        const answer = await cradle.mrpRunService.run(ACTOR, { mode: "automatic" });
+        // Counted inside the timed transaction: its run, not the committed one, is what the batch created from.
+        candidates = await cradle.em.count(MrpRecommendation, { kind: "purchase-requisition" });
+        return answer;
+      });
+      outcomes.push(view.creation!);
+    });
+
+    process.stdout.write(
+      `MRP automatic run, ${size.name} (${candidates} Buy proposals, outcome ${JSON.stringify(outcomes[0])}): ${fastest.toFixed(0)} ms fastest of ${RUNS}, longest event-loop stall ${longestStall.toFixed(0)} ms\n`,
+    );
+    // Rolled back, the three attempts planned the same data and came to the same outcome.
+    expect(outcomes).toEqual([outcomes[0], outcomes[0], outcomes[0]]);
+    expect(candidates).toBeGreaterThan(0);
+    if (size.locations === 1) {
+      expect(outcomes[0]).toEqual({ status: "created", documents: candidates });
+      expect(fastest).toBeLessThan(CI_FACTOR * AUTOMATIC_BUDGET_MS);
+    }
+    expect(longestStall).toBeLessThan(CI_FACTOR * STALL_BUDGET_MS);
+  }, 2 * RUNS * CI_FACTOR * BATCH_AT_CAP_BUDGET_MS);
+
   it("writes a recommendation for every day of every material in the worst case, and still stays within its budget (#278)", async () => {
     const execute = (sql: string) => orm.em.getConnection().execute(sql);
     const days = 90;
@@ -340,4 +385,28 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     expect(fastest).toBeLessThan(CI_FACTOR * size.budgetMs);
     expect(longestStall).toBeLessThan(CI_FACTOR * STALL_BUDGET_MS);
   }, testTimeout);
+
+  // Ten times the worst case has more Buy proposals than the cap, so the batch at exactly the cap is timed there.
+  it.runIf(size.locations > 1)("creates a batch of exactly the cap's candidates within its budget (E19-S03 Q13, Q15)", async () => {
+    const execute = (sql: string) => orm.em.getConnection().execute(sql);
+    // The worst case (above) left its run's recommendations: keep the first `MRP_BATCH_LIMIT` Buy proposals of active masters.
+    await execute(`delete from mrp_recommendation where kind = 'production-order' or material = '99999998'`);
+    await execute(`delete from mrp_recommendation where id not in (select id from mrp_recommendation order by material, location, need_date limit ${MRP_BATCH_LIMIT})`);
+    expect(await count("select count(*) as n from mrp_recommendation")).toBe(MRP_BATCH_LIMIT);
+    const outcomes: MrpRunCreation[] = [];
+
+    const { fastest, longestStall } = await measure(async () => {
+      const outcome = await rolledBack(async (cradle) => {
+        await holdWriteGate(cradle.em);
+        const run = await cradle.em.findOneOrFail(MrpRun, {}, { orderBy: { code: "desc" } });
+        return cradle.mrpBatchService.createAll(run, ACTOR);
+      });
+      outcomes.push(outcome.creation);
+    });
+
+    process.stdout.write(`MRP automatic batch at the cap, ${size.name} (${MRP_BATCH_LIMIT} requisitions): ${fastest.toFixed(0)} ms fastest of ${RUNS}, longest event-loop stall ${longestStall.toFixed(0)} ms\n`);
+    expect(outcomes[0]).toEqual({ status: "created", documents: MRP_BATCH_LIMIT });
+    expect(fastest).toBeLessThan(CI_FACTOR * BATCH_AT_CAP_BUDGET_MS);
+    expect(longestStall).toBeLessThan(CI_FACTOR * STALL_BUDGET_MS);
+  }, 2 * RUNS * CI_FACTOR * BATCH_AT_CAP_BUDGET_MS);
 });

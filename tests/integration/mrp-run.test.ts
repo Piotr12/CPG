@@ -18,6 +18,7 @@ const shown = (selector: string) => `[...document.querySelectorAll(${JSON.string
 /** True once the shown `selector` is hydrated, so a click reaches React (lesson 2026-10-23). */
 const ready = (selector: string) => `Boolean(${shown(selector)}) && Object.keys(${shown(selector)}).some((key) => key.startsWith("__reactFiber"))`;
 const RUN_BUTTON = "main button[data-mrp-run]";
+const RUN_SUBMIT = "[data-mrp-run-dialog] button[data-mrp-run-submit]";
 const field = (key: string) => `main [data-mrp-field=${key}]`;
 const day = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
 
@@ -71,14 +72,19 @@ describe("the MRP page", () => {
     await uma.waitUntil(ready(RUN_BUTTON));
     const before = await text(uma, "id");
 
+    // Run MRP opens its dialog on Manual (E19-S03, RUN-003); confirming runs it.
     await uma.click(RUN_BUTTON);
-    await uma.waitUntil(`(${shown(field("id"))}?.textContent ?? "") !== ${JSON.stringify(before)} && !${shown(RUN_BUTTON)}.disabled`);
+    await uma.waitUntil(ready(RUN_SUBMIT));
+    expect(await uma.evaluate<boolean>(`document.querySelector("[data-mrp-run-dialog] input[value=manual]").checked`)).toBe(true);
+    await uma.click(RUN_SUBMIT);
+    await uma.waitUntil(`(${shown(field("id"))}?.textContent ?? "") !== ${JSON.stringify(before)} && !document.querySelector("[data-mrp-run-dialog]")`);
 
     const id = await text(uma, "id");
     expect(id).toMatch(/^\d{8}$/);
     expect(await text(uma, "time")).toMatch(new RegExp(`^${day(0)} \\d\\d:\\d\\d UTC$`));
     expect(await text(uma, "account")).toBe(`${USERNAME} · UI`);
     expect(await text(uma, "days")).toBe(`${day(0)} – ${day(89)} (90 days)`);
+    expect(await text(uma, "creation")).toBe("Manual");
     const { run, total, plans } = await latest();
     expect(run).toMatchObject({ id, account: USERNAME, channel: "ui" });
     expect(String(total)).toBe(await text(uma, "pairs"));

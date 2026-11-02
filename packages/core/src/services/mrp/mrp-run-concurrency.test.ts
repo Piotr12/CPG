@@ -76,26 +76,34 @@ describe("MRP runs on two connections", () => {
     expect(rows).toEqual([{ code: "00000002", n: 20 * 90 }]);
   });
 
-  it("plans again from fresh data when a write already open on the other connection commits during the snapshot", async () => {
+  it("fails a run whose snapshot another connection's commit made stale at its first write, before it plans, and plans once from fresh data (E19-S03 Q3)", async () => {
     const runner = await bundle();
     const writer = await bundle();
-    const { cradle: writing } = await writer.prod();
-    // The other bundle's write is open, holding SQLite's write lock, before the run starts.
-    await writing.em.begin();
-    await writing.stockService.correct({ material: "00000001", location: PLANT, quantity: "5", unit: "each", reason: "Recount" }, ANNA);
     const load = vi.fn();
     const { MrpSnapshotService } = await import("./mrp-snapshot.service");
     const original = MrpSnapshotService.prototype.load;
     vi.spyOn(MrpSnapshotService.prototype, "load").mockImplementation(async function (this: InstanceType<typeof MrpSnapshotService>, today) {
       load(today);
-      // It commits while the run reads its snapshot: the run's first write then finds its snapshot stale.
-      if (load.mock.calls.length === 1) await writing.em.commit();
       return original.call(this, today);
     });
+    let attempts = 0;
 
-    const view = await wrappedRun(runner.prod);
+    const view = await retryingStaleSnapshot(async () => {
+      attempts += 1;
+      const { cradle } = await runner.prod();
+      return inRequestTransaction(cradle.em, async () => {
+        // The wrapper's first read takes the snapshot; the other bundle's recount then commits before the run writes.
+        await cradle.tenantService.currentState("prod");
+        if (attempts === 1) {
+          await (await writer.prod()).cradle.stockService.correct({ material: "00000001", location: PLANT, quantity: "5", unit: "each", reason: "Recount" }, ANNA);
+        }
+        return cradle.mrpRunService.run(ANNA);
+      });
+    });
 
-    expect(load).toHaveBeenCalledTimes(2);
+    expect(attempts).toBe(2);
+    // The stale attempt failed at its first write, the deletes, before it loaded anything: one plan in all.
+    expect(load).toHaveBeenCalledTimes(1);
     expect(view.id).toBe("00000001");
     const [day] = await runner.orm.em.getConnection().execute(
       "select projected_before from mrp_daily_result where material = '00000001' and date = '2026-10-01'",

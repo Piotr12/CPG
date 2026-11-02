@@ -5,6 +5,7 @@ import { resolveServerComponents } from "../../../../../../../tests/setup/server
 import { en } from "../../../../i18n/messages/en";
 import { pl } from "../../../../i18n/messages/pl";
 import MrpPage from "./page";
+import { runMrpLabels } from "../../../../components/mrp/mrp-run-screen";
 
 const mocks = vi.hoisted(() => ({
   connection: vi.fn(), requireUser: vi.fn(), tenantScope: vi.fn(), getMessages: vi.fn(), latest: vi.fn(), runMrp: vi.fn(), acceptMrpProposal: vi.fn(), materials: vi.fn(), locations: vi.fn(),
@@ -18,7 +19,7 @@ vi.mock("./actions", () => ({ runMrp: mocks.runMrp, acceptMrpProposal: mocks.acc
 
 const run: MrpRunView = {
   id: "00000004", createdAt: new Date("2026-10-27T07:12:45.000Z"), account: "anna", channel: "ui", mode: "manual", generation: 3,
-  startDate: "2026-10-27", endDate: "2027-01-24", horizonDays: 90, pairs: 30,
+  startDate: "2026-10-27", endDate: "2027-01-24", horizonDays: 90, pairs: 30, creation: null,
 };
 const zero = "0.000000";
 const plan: MrpPlanView = {
@@ -70,10 +71,13 @@ describe("MrpPage", () => {
     expect(field("account")).toBe("anna · UI");
     expect(field("days")).toBe("2026-10-27 – 2027-01-24 (90 days)");
     expect(field("pairs")).toBe("30");
+    expect(field("creation")).toBe("Manual");
     expect(screen.getByRole("heading", { level: 2, name: en.mrp.report.heading })).toBeTruthy();
     expect(within(screen.getByRole("table", { name: en.mrp.report.label })).getByText("00000012 — Steel sheet")).toBeTruthy();
-    screen.getByRole("button", { name: en.mrp.run }).click();
-    await vi.waitFor(() => expect(mocks.runMrp).toHaveBeenCalledWith("test", 3));
+    // Run MRP opens its dialog, which runs in the chosen mode (E19-S03).
+    fireEvent.click(screen.getByRole("button", { name: en.mrp.run }));
+    fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: en.mrp.run }));
+    await vi.waitFor(() => expect(mocks.runMrp).toHaveBeenCalledWith("test", 3, { mode: "manual" }));
   });
 
   it("reads the report with the page's filters, keeps them in the form, and shows the last page for one past the end", async () => {
@@ -186,5 +190,82 @@ describe("MrpPage", () => {
     mocks.latest.mockRejectedValue(new Error("disk I/O error"));
 
     await expect(resolveServerComponents(page())).rejects.toThrow("disk I/O error");
+  });
+});
+
+describe("MrpPage: the latest run's creation (E19-S03)", () => {
+  const candidate = { proposal: proposal.id, kind: "purchase-requisition" as const, material: "00000031", location: "00000002", needDate: "2026-11-05", quantity: "1234.500000" };
+  const withCreation = (creation: MrpRunView["creation"]) => {
+    mocks.latest.mockResolvedValue(report({ run: { ...run, mode: "automatic", creation } }));
+    return resolveServerComponents(page()).then(render);
+  };
+  const failure = () => document.querySelector("[data-mrp-creation-failure]")?.textContent ?? null;
+
+  it("says how many documents an automatic batch created, one or many, and when it had none to create", async () => {
+    await withCreation({ status: "created", documents: 5 });
+    expect(field("creation")).toBe("Automatic: 5 documents created");
+    expect(failure()).toBeNull();
+  });
+
+  it("uses the singular for one document, and says when an automatic run had nothing to create", async () => {
+    const { unmount } = await withCreation({ status: "created", documents: 1 });
+    expect(field("creation")).toBe("Automatic: 1 document created");
+    unmount();
+
+    await withCreation({ status: "created", documents: 0 });
+    expect(field("creation")).toBe("Automatic: no proposals to create");
+  });
+
+  it("RUN-023: names a failed batch's cause and its candidate, as a standing note that takes no focus", async () => {
+    await withCreation({ status: "failed", code: "MATERIAL_INACTIVE", message: "Material is inactive.", candidate });
+
+    expect(field("creation")).toBe("Automatic: failed, nothing created");
+    expect(failure()).toBe(
+      "The automatic batch created nothing." + en.mrp.creation.causes.MATERIAL_INACTIVE +
+        "Candidate: purchase requisition for material 00000031 at location 00000002, 1,234.5 needed on 2026-11-05.",
+    );
+    expect(document.querySelector("[data-mrp-creation-failure] [role=note]")).not.toBeNull();
+  });
+
+  it.each([
+    [{ code: "LOCATION_INACTIVE", message: "x" }, en.mrp.creation.causes.LOCATION_INACTIVE],
+    [{ code: "VALIDATION_FAILED", message: "Some fields are invalid.", fieldErrors: { quantity: ["Too large."] } }, en.mrp.creation.causes.quantity],
+    [{ code: "VALIDATION_FAILED", message: "Some fields are invalid.", fieldErrors: { unit: ["Unknown."] } }, "Some fields are invalid."],
+    [{ code: "SOMETHING_NEW", message: "A newer refusal." }, "A newer refusal."],
+  ])("explains a %o refusal in the reader's language, or keeps the server's text", async (refusal, cause) => {
+    await withCreation({ status: "failed", ...refusal, candidate });
+    expect(failure()).toContain(cause);
+  });
+
+  it("explains a batch over the cap with its count and limit, and names no candidate", async () => {
+    await withCreation({ status: "failed", code: "MRP_BATCH_TOO_LARGE", message: "x", params: { candidates: "2600", limit: "2500" } });
+
+    expect(failure()).toBe(
+      "The automatic batch created nothing.The run had 2600 proposals to create, more than the 2500 one batch may create. Accept them one at a time, or ask for the limit to be raised.",
+    );
+  });
+
+  it("names a candidate kind it has no label for, stored by a newer image, as stored", async () => {
+    await withCreation({ status: "failed", code: "MATERIAL_INACTIVE", message: "x", candidate: { ...candidate, kind: "transfer" as never } });
+    expect(failure()).toContain("Candidate: transfer for material 00000031");
+  });
+
+  it("speaks Polish on the card", async () => {
+    mocks.getMessages.mockResolvedValue({ locale: "pl", messages: pl });
+    await withCreation({ status: "created", documents: 3 });
+    expect(field("creation")).toBe("Automatyczne: utworzono 3 dokumenty");
+  });
+});
+
+describe("runMrpLabels", () => {
+  it("gives the client dialog plain strings only, the tenant filled in, in either language (lesson 2026-10-24)", () => {
+    for (const messages of [en, pl]) {
+      const labels = runMrpLabels(messages, "Test");
+      const { errors, ...texts } = labels;
+      expect(Object.values(texts).every((value) => typeof value === "string")).toBe(true);
+      expect(Object.values(errors).every((value) => typeof value === "string")).toBe(true);
+      expect(labels.description).toContain("Test");
+      expect(labels.description).not.toContain("{tenant}");
+    }
   });
 });

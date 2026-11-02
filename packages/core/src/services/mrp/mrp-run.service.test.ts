@@ -95,7 +95,7 @@ describe("MrpRunService.run", () => {
 
     expect(view).toEqual({
       id: "00000001", createdAt: NOW, account: "anna", channel: "ui", mode: "manual", generation: 1,
-      startDate: "2026-10-01", endDate: "2026-12-29", horizonDays: 90, pairs: 3,
+      startDate: "2026-10-01", endDate: "2026-12-29", horizonDays: 90, pairs: 3, creation: null,
     });
     const stored = await sql<{ location: string; days: number; first: string; last: string }>(
       "select location, count(*) as days, min(date) as first, max(date) as last from mrp_daily_result group by location order by location",

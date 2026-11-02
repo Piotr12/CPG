@@ -1,20 +1,21 @@
 "use server";
-import { assertSignedIn, tenantServerAction, uiActor, type MrpAcceptanceView, type MrpRunView, type Result } from "@cpg/core";
+import { assertSignedIn, tenantServerAction, uiActor, type MrpAcceptanceView, type MrpRunAnswer, type Result } from "@cpg/core";
 import { mrpProposalAcceptActionSchema } from "@cpg/core/validators/mrp/mrp-proposal-accept.schema";
 import { mrpRunSchema } from "@cpg/core/validators/mrp/mrp-run.schema";
 import { currentUser } from "../../../../auth/require-admin";
 import { refreshAfterWrite } from "../../../../routing/refresh-after-write";
 
 /**
- * Runs MRP for every location of the bound tenant (E14-S02). Both roles may; `tenantServerAction`
- * refuses a read-only tenant, the admin included, and a page bound to an older Test generation.
+ * Runs MRP for every location of the bound tenant (E14-S02), in the Run MRP dialog's mode: `{ mode }`, manual
+ * when absent (E19-S03). Both roles may; `tenantServerAction` refuses a read-only tenant, the admin included,
+ * and a page bound to an older Test generation.
  */
-export async function runMrp(tenant: string, generation: number): Promise<Result<MrpRunView>> {
+export async function runMrp(tenant: string, generation: number, raw: unknown): Promise<Result<MrpRunAnswer>> {
   const user = await currentUser();
-  const result = await tenantServerAction(mrpRunSchema, (_input, { cradle }) => cradle.mrpRunService.run(uiActor(assertSignedIn(user))))(
+  const result = await tenantServerAction(mrpRunSchema, (input, { cradle }) => cradle.mrpRunService.run(uiActor(assertSignedIn(user)), input ?? {}))(
     tenant,
     generation,
-    {},
+    raw,
   );
   return refreshAfterWrite(result, `/admin/${tenant}/mrp`);
 }

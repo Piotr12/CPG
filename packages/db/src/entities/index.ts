@@ -70,7 +70,7 @@ import {
 import { SafetyStockTarget } from "./safety-stock/safety-stock-target.entity";
 import { Forecast } from "./forecasts/forecast.entity";
 import { LOCALES, THEMES, UserPreference, type Locale, type Theme } from "./preferences/user-preference.entity";
-import { MRP_RUN_MODES, MrpRun, type MrpRunMode } from "./mrp/mrp-run.entity";
+import { MRP_RUN_MODES, MrpRun, type MrpBatchCandidate, type MrpRunCreation, type MrpRunMode } from "./mrp/mrp-run.entity";
 import { MrpDailyResult } from "./mrp/mrp-daily-result.entity";
 import { MRP_RECOMMENDATION_KINDS, MrpRecommendation, type MrpRecommendationKind } from "./mrp/mrp-recommendation.entity";
 import { MrpRunException } from "./mrp/mrp-run-exception.entity";
@@ -107,7 +107,7 @@ export { Bom, BomComponent, BOM_REVISION_IMMUTABLE, BomRevision };
 export { PURCHASE_ORDER_STATUSES, PurchaseOrder, PurchaseOrderLine, PurchaseRequisition, REQUISITION_STATUSES };
 export type { ProcurementMode, PurchaseOrderStatus, RequisitionStatus };
 export { MRP_RECOMMENDATION_KINDS, MRP_RUN_MODES, MrpDailyResult, MrpRecommendation, MrpRun, MrpRunException };
-export type { MrpRecommendationKind, MrpRunMode };
+export type { MrpBatchCandidate, MrpRecommendationKind, MrpRunCreation, MrpRunMode };
 export type { AuditChannel, AuditSnapshot, AuditValue, Locale, TenantCode, Theme, UserRole };
 export { currentTenant, isTenantOwned, TENANT_FILTER, tenantOwned, TenantViolationError, selectTenant };
 
