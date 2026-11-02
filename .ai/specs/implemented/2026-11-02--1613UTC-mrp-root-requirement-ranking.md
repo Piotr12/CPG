@@ -1,6 +1,6 @@
 # MRP root ranking: a Make proposal's component needs rank by the requirement they serve at the root, split by share, through every level
 
-**Status:** ready. Q4 awaits Piotr12's confirmation; the other answer is a one-line change.
+**Status:** implemented (#356). Q4 awaits Piotr12's confirmation; the other answer is a one-line change. The worst-case run time is a decision for the owner (Implementation notes).
 **Created:** 2026-11-02 16:13 UTC
 **Issue:** #327 (follow-up to #281's Q9) · **Depends on:** MRP proposal timing and demand priority (`implemented/2026-11-01--0738UTC-mrp-proposal-timing-demand-priority.md`, #279), BOM explosion (`implemented/2026-11-01--1107UTC-mrp-bom-explosion.md`, #281), BOM choice (`implemented/2026-11-01--1918UTC-mrp-bom-choice.md`, #282), at-risk and provisional plans (`implemented/2026-11-01--2049UTC-mrp-at-risk-and-provisional-plans.md`, #283), all merged · **Design authority:** `.ai/specs/product-brief.md` (R03, R10, D04), `research/CPG-prd001.pdf` §04 "Overdue demand and priority", "Multilevel explosion", `research/CPG-acceptance.md` MRP-044, DEM-018 to DEM-022
 
@@ -234,3 +234,23 @@ One phase, one implementation PR: the trace, the split and the ranking are usele
    - `.ai/docs/engineering-standards.md`, the priority bullet: planned components rank by their root, shares from `pegProposals`, and the queues insert in order. `pegProposals` is the only trace, by need date, existing supply first.
    - `CPG-acceptance.md`, MRP-044's Evidence: the multilevel case, citing the `plan-mrp.test.ts` test. Status stays Not executed (Q9).
    - Move this spec to `implemented/` with implementation notes.
+
+## Implementation notes
+
+Implemented on #356, spec PR #355. Where the code differs from the design above:
+
+- **One requirement list per traced pair.** `requirementsByDate(pair)` takes no option: it lists every requirement, and the trace pushes only those whose `provisional` flag its pass serves. `planMrp` builds a traced pair's list once, and `pegProposals` and `rankShortages` both take it (an optional last argument), each serving from `required` again (`unserved`). A pair that isn't traced builds its list in `rankShortages`, as before.
+- **A flat key.** `Requirement` carries its root's key flat (`rank`, `originalDate`, `kindOrder`, `document`, `position`, `rootMaterial`) and the share's root as `share`, `null` for the pair's own requirement, whose root `rootOf` builds when it is reported or traced. `compareRoots` orders `MrpDemandRoot`s by the same key. The parent's need date is compared as a date string (`parentNeedDate`), not a day number.
+- **Queues.** Each rank keeps a head pointer. `push` appends when a requirement sorts last, which is the usual case, and otherwise inserts by binary search.
+- **Tests.** `requirements.test.ts` pins the order, the merge and the queues; `peg-proposals.test.ts` the trace, both review counterexamples included; `rank-shortages.test.ts` and `plan-mrp.test.ts` the ranking, MRP-044's multilevel case and a three-level provisional chain.
+- **Run time, a decision for the owner.** Each component need becomes one requirement per root its parent serves, and roots compound over levels. On `mrp-run-timing.test.ts` (this machine, fastest of 3), `planMrp` alone takes:
+
+  | Case | `main` | #356 |
+  |---|---|---|
+  | realistic | 7 ms | 10 ms |
+  | worst case for proposals, realistic | 21 ms | 50 ms |
+  | ten times | 70 ms | 140 ms |
+  | worst case for proposals, ten times | 224 ms | 458 ms |
+
+  The ten-times worst case was already above the 250 ms stall budget on `main` (270 ms) and is about 550 ms here. The CI bounds still pass. Profiling showed the extra time is the larger requirement count, not the trace (about 15 ms of a 230 ms synthetic run). Merging shares of equal business priority (rank, original date, kind and material) into one would bring the count back. But `root` would then name only one of those order lines, which changes Q6, so it is left to the owner.
+
