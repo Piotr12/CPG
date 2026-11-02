@@ -6,6 +6,7 @@ import { isMrpProvisionalCode, readStoredProvisional, toStoredProvisional } from
 import type { MrpBucket, MrpResult } from "../../domain/mrp/mrp-result";
 import { isExecutableProposal } from "../../domain/mrp/acceptance/executable-proposal";
 import { planMrp } from "../../domain/mrp/plan-mrp";
+import { exceptionRejections, isMrpBomRejectionsCode, readBomRejections, toStoredBomRejections, type MrpBomRejectionView } from "../../domain/mrp/report/bom-rejections";
 import { planMarks, type StoredWarningRow } from "../../domain/mrp/report/plan-marks";
 import { summarizePlan } from "../../domain/mrp/report/plan-summary";
 import { foldWeeks } from "../../domain/mrp/report/weekly";
@@ -61,8 +62,8 @@ const bucketFigures = (bucket: MrpBucket) =>
  * On-demand MRP runs of one tenant (E14-S02, PRD §04): a run plans every location over 90 days from
  * today and stores itself with its daily results; the latest run is shown until a newer one
  * supersedes it. A run writes only its own four tables (the run, its daily results, its
- * recommendations, E16-S01, and its exceptions, E16-S03, with its warnings, E18-S02, and its provisional
- * actions, E17-S03) and its audit entry (R10).
+ * recommendations, E16-S01, and its exceptions, E16-S03, with its warnings, E18-S02, its provisional
+ * actions, E17-S03, and its fallbacks' rejected BOMs, E18-S03) and its audit entry (R10).
  */
 export class MrpRunService {
   private readonly em: EntityManager;
@@ -176,8 +177,8 @@ export class MrpRunService {
    */
   private async describe(
     plans: GroupedPlan[],
-    proposals: ReadonlyMap<string, MrpProposalView[]>,
-    { exceptions, warnings, provisional }: StoredRows,
+    proposals: ReadonlyMap<string, StoredProposal[]>,
+    { exceptions, warnings, provisional, rejections }: StoredRows,
     weekly: boolean,
   ): Promise<MrpPlanView[]> {
     if (plans.length === 0) return [];
@@ -188,13 +189,16 @@ export class MrpRunService {
       const site = locations.get(location)!;
       const key = pairKey(material, location);
       // `proposalsOf` and `exceptionsOf` key every plan of the page, with or without rows.
-      const marks = planMarks(proposals.get(key)!, warnings.get(key)!);
+      const rejected = rejections.get(key)!;
+      // A fallback's rejections attach to its proposal: one per pair and need date (E18-S03 spec Q1).
+      const planned = proposals.get(key)!.map((proposal) => ({ ...proposal, rejectedBoms: rejected.get(proposal.needDate) ?? [] }));
+      const marks = planMarks(planned, warnings.get(key)!);
       return {
         material, materialDescription: description, materialActive: active, baseUnit,
         location, locationName: site.name, locationActive: site.active,
         ...summarizePlan(buckets as [MrpBucketView, ...MrpBucketView[]]),
         buckets,
-        proposals: proposals.get(key)!,
+        proposals: planned,
         exceptions: exceptions.get(key)!,
         provisional: provisional.get(key)!,
         marks,
@@ -208,8 +212,8 @@ export class MrpRunService {
    * need_date)` index. The page is contiguous in material and location order, so only its first and
    * last material can have pairs off the page; those rows are read and dropped here.
    */
-  private async proposalsOf(run: MrpRun, plans: GroupedPlan[], location: string | undefined): Promise<Map<string, MrpProposalView[]>> {
-    const byPair = new Map<string, MrpProposalView[]>(plans.map((plan) => [pairKey(plan.material, plan.location), []]));
+  private async proposalsOf(run: MrpRun, plans: GroupedPlan[], location: string | undefined): Promise<Map<string, StoredProposal[]>> {
+    const byPair = new Map<string, StoredProposal[]>(plans.map((plan) => [pairKey(plan.material, plan.location), []]));
     if (plans.length === 0) return byPair;
     const materials = [...new Set(plans.map((plan) => plan.material))];
     const rows = await this.em.find(
@@ -236,14 +240,16 @@ export class MrpRunService {
    * through the unique `(tenant, run, material, location, position)` index. A code this image doesn't know,
    * written by a newer one before a rollback, is listed with the fallback message (spec Q7). Warnings share
    * the table but are never exceptions (E18-S02, spec Q1): they become the report's marks. Neither are
-   * provisional actions (E17-S03 spec Q8), each timed by the engine's own rule from the run's first day.
+   * provisional actions (E17-S03 spec Q8), each timed by the engine's own rule from the run's first day, nor a
+   * fallback's rejected BOMs (E18-S03 spec Q1), kept by need date for its proposal.
    */
   private async exceptionsOf(run: MrpRun, plans: GroupedPlan[], location: string | undefined): Promise<StoredRows> {
     const keyed = <T>() => new Map<string, T[]>(plans.map((plan) => [pairKey(plan.material, plan.location), []]));
     const byPair = keyed<MrpExceptionView>();
     const warnings = keyed<StoredWarningRow>();
     const provisional = keyed<MrpProvisionalView>();
-    if (plans.length === 0) return { exceptions: byPair, warnings, provisional };
+    const rejections = new Map(plans.map((plan) => [pairKey(plan.material, plan.location), new Map<string, MrpBomRejectionView[]>()]));
+    if (plans.length === 0) return { exceptions: byPair, warnings, provisional, rejections };
     const materials = [...new Set(plans.map((plan) => plan.material))];
     const rows = await this.em.find(
       MrpRunException,
@@ -251,10 +257,14 @@ export class MrpRunService {
       { orderBy: { material: "asc", location: "asc", position: "asc" }, fields: ["material", "location", "exceptionCode", "date", "details"], disableIdentityMap: true },
     );
     for (const row of rows) {
+      if (isMrpBomRejectionsCode(row.exceptionCode)) {
+        rejections.get(pairKey(row.material, row.location))?.set(row.date!, readBomRejections(row.details as Record<string, string>));
+        continue;
+      }
       if (isMrpProvisionalCode(row.exceptionCode)) {
         const { leadTimeDays, ...read } = readStoredProvisional(row.date!, row.details!);
         const timing = scheduleProposal(read.needDate, leadTimeDays, run.startDate, run.horizonDays);
-        provisional.get(pairKey(row.material, row.location))?.push({ kind: "production-order", ...read, ...timing });
+        provisional.get(pairKey(row.material, row.location))?.push({ kind: "production-order", ...read, ...timing, rejectedBoms: readBomRejections(read) });
         continue;
       }
       if (isMrpWarningCode(row.exceptionCode)) {
@@ -262,9 +272,10 @@ export class MrpRunService {
         continue;
       }
       const params = exceptionParams({ material: row.material, location: row.location, date: row.date ?? null, details: row.details ?? null });
-      byPair.get(pairKey(row.material, row.location))?.push({ code: row.exceptionCode, message: mrpExceptionMessage(row.exceptionCode), params });
+      const rejectedBoms = exceptionRejections(row.exceptionCode, row.details ?? null);
+      byPair.get(pairKey(row.material, row.location))?.push({ code: row.exceptionCode, message: mrpExceptionMessage(row.exceptionCode), params, ...(rejectedBoms && { rejectedBoms }) });
     }
-    return { exceptions: byPair, warnings, provisional };
+    return { exceptions: byPair, warnings, provisional, rejections };
   }
 
   private latestRun(): Promise<MrpRun | null> {
@@ -272,8 +283,8 @@ export class MrpRunService {
   }
 
   /**
-   * Inserts every planned day, then every proposal, then every exception, every warning and every provisional
-   * action at its position in the run's order, in chunks, yielding between them; the run is re-loaded after each `em.clear()`.
+   * Inserts every planned day, then every proposal, then every exception, every warning, every provisional
+   * action and every fallback's rejected BOMs at its position in the run's order, in chunks, yielding between them; the run is re-loaded after each `em.clear()`.
    * Proposals are above zero, so they go through `formatDecimal`.
    */
   private async writeResults(stored: MrpRun, { plans, proposals, exceptions, warnings, provisional }: MrpResult): Promise<void> {
@@ -316,6 +327,15 @@ export class MrpRunService {
       this.em.create(MrpRunException, { run, position: exceptions.length + warnings.length + index, exceptionCode, ...stored });
       await created();
     }
+    // A fallback's rejected BOMs follow every provisional action, so each earlier row keeps its position (E18-S03 spec Q1).
+    let position = exceptions.length + warnings.length + provisional.length;
+    for (const proposal of proposals) {
+      const rejected = toStoredBomRejections(proposal);
+      if (!rejected) continue;
+      const { code: exceptionCode, ...stored } = rejected;
+      this.em.create(MrpRunException, { run, position: position++, exceptionCode, ...stored });
+      await created();
+    }
     await this.em.flush();
     this.em.clear();
   }
@@ -326,7 +346,12 @@ interface StoredRows {
   exceptions: Map<string, MrpExceptionView[]>;
   warnings: Map<string, StoredWarningRow[]>;
   provisional: Map<string, MrpProvisionalView[]>;
+  /** Each pair's fallbacks' rejected BOMs, by need date (E18-S03). */
+  rejections: Map<string, Map<string, MrpBomRejectionView[]>>;
 }
+
+/** A stored proposal as `proposalsOf` reads it, before `describe` attaches its rejected BOMs. */
+type StoredProposal = Omit<MrpProposalView, "rejectedBoms">;
 
 /** One pair's days, before `describe` names it. */
 type GroupedPlan = Pick<MrpPlanView, "material" | "location" | "buckets">;

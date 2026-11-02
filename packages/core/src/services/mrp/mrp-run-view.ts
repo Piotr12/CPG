@@ -2,6 +2,7 @@ import type { AuditChannel, MrpRecommendationKind, MrpRun, MrpRunMode } from "@c
 import { addDays } from "../../domain/demand/demand-buckets";
 import type { MrpBucket, MrpProposalTiming } from "../../domain/mrp/mrp-result";
 import type { ReadProvisional } from "../../domain/mrp/provisional/stored-provisional";
+import type { MrpBomRejectionView } from "../../domain/mrp/report/bom-rejections";
 import type { MrpMark } from "../../domain/mrp/report/plan-marks";
 import type { MrpWeek } from "../../domain/mrp/report/weekly";
 import type { MrpReportBucket } from "../../validators/mrp/mrp-latest.schema";
@@ -87,7 +88,11 @@ export interface MrpExceptionView {
   code: string;
   message: string;
   params: Record<string, string>;
+  /** No Feasible BOM's and Missing Usable BOM's rejected BOMs, structured from `params` (E18-S03); absent on other codes. */
+  rejectedBoms?: MrpBomRejectionView[];
 }
+
+export type { MrpBomRejectionView, MrpComponentShortfallView } from "../../domain/mrp/report/bom-rejections";
 
 /**
  * One stored replenishment proposal (E16-S01): what it would create, the day it covers, a six-decimal
@@ -109,6 +114,11 @@ export interface MrpProposalView extends MrpProposalTiming {
   bom: string | null;
   /** That BOM's current revision number; null where `bom` is. */
   bomRevision: number | null;
+  /**
+   * Every BOM MRP passed over before `bom`, in the order it tested them, each with why (E18-S03, UX-020): empty
+   * for a requisition, a first-choice BOM, or a row an older image wrote.
+   */
+  rejectedBoms: MrpBomRejectionView[];
 }
 
 /**
@@ -119,6 +129,8 @@ export interface MrpProposalView extends MrpProposalTiming {
  */
 export interface MrpProvisionalView extends MrpProposalTiming, Omit<ReadProvisional, "leadTimeDays"> {
   kind: "production-order";
+  /** Every BOM it passed over, structured from `missing`, `inactive` and `order` (E18-S03); empty when it chose its first. */
+  rejectedBoms: MrpBomRejectionView[];
 }
 
 /** `GET /api/tenants/{tenant}/mrp/runs/latest`: the latest run and one page of its plans. */

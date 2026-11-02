@@ -237,10 +237,12 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     const actions = await count("select count(*) as n from mrp_run_exception where exception_code = 'PROVISIONAL_PRODUCTION'");
     const driven = await count("select count(*) as n from mrp_run_exception where exception_code = 'PROVISIONAL_PRODUCTION' and details like '%provisional-demand%'");
     const atRisk = await count("select count(*) as n from mrp_run_exception where exception_code = 'AT_RISK_PRODUCTION'");
+    // E18-S03: each fallback's rejected BOMs, one row per proposal that passed over a BOM.
+    const rejections = await count("select count(*) as n from mrp_run_exception where exception_code = 'BOM_REJECTIONS'");
     const engine = await engineOnly();
     process.stdout.write(
       `MRP run, ${size.name} (${pairs} pairs, ${rows} daily rows, ${proposals} recommendations of which ${made} exploded, ${fallbacks} through a fallback BOM, ${provisional} No Feasible BOM, ` +
-        `${actions} provisional actions of which ${driven} for a provisional parent, ${atRisk} at-risk orders, ${exceptions} exception, warning and provisional rows, ${lines} active BOM lines, ` +
+        `${actions} provisional actions of which ${driven} for a provisional parent, ${atRisk} at-risk orders, ${rejections} fallbacks explained, ${exceptions} mrp_run_exception rows, ${lines} active BOM lines, ` +
         `${size.lines} order lines, ${size.forecasts} forecasts, ` +
         `${size.orders + size.fullOrders} purchase orders with ${size.orders * ORDER_LINES + size.fullOrders * FULL_ORDER_LINES} lines, ${size.requisitions} requisitions, ` +
         `${size.productionOrders} production orders, ${size.transfers} transfers): ` +
@@ -276,6 +278,8 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     if (size.locations === 1) {
       expect(fallbacks).toBeGreaterThan(0);
       expect(made).toBeGreaterThan(0);
+      // Every proposal through a priority-2 alternative passed over priority 1, so the run explains it (E18-S03).
+      expect(rejections).toBeGreaterThanOrEqual(fallbacks);
     }
     // The run counted the pipeline it read: some days carry tentative and dependable supply, dependent demand and transfers.
     const supplied = await orm.em
@@ -327,7 +331,7 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     const proposals = recommendations + infeasible;
     const exceptions = await count("select count(*) as n from mrp_run_exception");
     process.stdout.write(
-      `MRP run, worst case for proposals, ${size.name} (${rows} daily rows, ${recommendations} recommendations and ${infeasible} infeasible Make proposals, ${exceptions} exception, warning and provisional rows, ${size.lines + size.materials * days} order lines): ` +
+      `MRP run, worst case for proposals, ${size.name} (${rows} daily rows, ${recommendations} recommendations and ${infeasible} infeasible Make proposals, ${exceptions} mrp_run_exception rows, ${size.lines + size.materials * days} order lines): ` +
         `${fastest.toFixed(0)} ms fastest of ${RUNS}, longest event-loop stall ${longestStall.toFixed(0)} ms, planMrp alone ${(await engineOnly()).toFixed(0)} ms\n`,
     );
     // Every day but, for some materials, today: overdue purchase-order lines all land today and can cover it.

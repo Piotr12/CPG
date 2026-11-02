@@ -46,13 +46,15 @@ describe("toStoredException and exceptionParams", () => {
     ];
     const missing = "00000004/1: 00000011 6.000000 5.000000 1.000000, 00000013 0.500000 0.000000 0.500000; 00000005/2: 00000012 6.000000 3.000000 3.000000";
     const stored = toStoredException({ code: "NO_FEASIBLE_BOM", material: "M1", location: "L1", date: "2026-10-05", rejections: short });
-    expect(stored).toEqual({ code: "NO_FEASIBLE_BOM", material: "M1", location: "L1", date: "2026-10-05", details: { missing } });
-    expect(exceptionParams(stored)).toEqual({ material: "M1", location: "L1", date: "2026-10-05", missing });
+    const order = "00000004/1, 00000005/2";
+    expect(stored).toEqual({ code: "NO_FEASIBLE_BOM", material: "M1", location: "L1", date: "2026-10-05", details: { missing, order } });
+    expect(exceptionParams(stored)).toEqual({ material: "M1", location: "L1", date: "2026-10-05", missing, order });
     const withInactive = toStoredException({
       code: "NO_FEASIBLE_BOM", material: "M1", location: "L1", date: "2026-10-05",
       rejections: [{ bom: "00000003", revision: 1, reason: "inactive-component", materials: ["00000014"] }, ...short],
     });
-    expect(withInactive.details).toEqual({ missing, inactive: "00000003/1: 00000014" });
+    // `order` keeps the engine's order across both lists (E18-S03 spec Q3).
+    expect(withInactive.details).toEqual({ missing, inactive: "00000003/1: 00000014", order: "00000003/1, 00000004/1, 00000005/2" });
   });
 
   it("stores At-Risk Production on the order's planned finish, its quantity as a six-decimal text and its inactive components joined (#283)", () => {
