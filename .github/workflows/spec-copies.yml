@@ -26,7 +26,7 @@ jobs:
         with:
           node-version: 24
       # When main has moved on, the newer commit's own run deletes the copies. A push refused while main is still
-      # at this commit (a branch protection rule, say) fails the run.
+      # at this commit (a branch protection rule, say), or a main it can't read, fails the run.
       - name: Delete the active copy of specs already implemented or archived
         env:
           GH_TOKEN: ${{ github.token }}
@@ -38,8 +38,10 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit --quiet -m "docs(specs): delete the active copy of specs already implemented or archived (#351)" -m "$removed" -- .ai/specs
           if ! git push origin HEAD:refs/heads/main; then
-            [ "$(git ls-remote origin refs/heads/main | cut -f1)" != "$GITHUB_SHA" ] || exit 1
+            head="$(git ls-remote --exit-code origin refs/heads/main | cut -f1)"
+            [ -n "$head" ] && [ "$head" != "$GITHUB_SHA" ] || exit 1
             echo "main moved on; its own spec-copies run deletes the copies."
             exit 0
           fi
+          echo "Pushed $(git rev-parse HEAD) to main; starting Deploy."
           gh workflow run deploy.yml --ref main

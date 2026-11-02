@@ -10,7 +10,7 @@ Issue: #351
 
 ## Scope
 - `scripts/spec-copies.ts` (pure `isValidName`, `activeCopies`), `scripts/delete-spec-copies.ts` (command), their tests.
-- Config: `vitest.config.mts` (node project, coverage), `tsconfig.json` (include, `erasableSyntaxOnly`, `allowImportingTsExtensions`), `eslint.config.mjs` (`no-console` off for `scripts/**`).
+- Config: `vitest.config.mts` (node project, coverage), `tsconfig.json` (include, `allowImportingTsExtensions`). `erasableSyntaxOnly` and the lint change were dropped (the spec's Implementation notes).
 - `tests/ai-filenames.test.ts` imports the shared functions.
 - `.github/workflows/spec-copies.yml` (new), `.github/workflows/deploy.yml` (check job, `permissions`), `tests/spec-copies-workflows.test.ts`.
 - AGENTS.md, `.ai/docs/engineering-standards.md`, `.ai/lessons.md`, the spec into `implemented/`.
