@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { baseUnitTip, chosenBaseUnit, errorFormatter, fill, localeQuantity, formQuantity, TALL_DIALOG } from "./form-labels";
+import { baseUnitTip, chosenBaseUnit, errorFormatter, fill, isZeroQuantity, localeQuantity, formQuantity, TALL_DIALOG } from "./form-labels";
 
 describe("fill", () => {
   it("fills known placeholders and leaves unknown ones", () => {
@@ -13,6 +13,12 @@ describe("errorFormatter", () => {
 
     expect(format({ code: "CONFLICT", message: "x" })).toBe("Taken.");
     expect(format({ code: "SOMETHING_ELSE", message: "As the server said." })).toBe("As the server said.");
+  });
+});
+
+describe("isZeroQuantity", () => {
+  it("tells zero from a value by the stored text, whatever its trailing zeros (#304)", () => {
+    expect([isZeroQuantity("0.000000"), isZeroQuantity("0"), isZeroQuantity("0.000001"), isZeroQuantity("10.000000"), isZeroQuantity("-2.5")]).toEqual([true, true, false, false, false]);
   });
 });
 

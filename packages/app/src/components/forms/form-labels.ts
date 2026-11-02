@@ -25,6 +25,14 @@ export function formQuantity(quantity: string): string {
 }
 
 /**
+ * Whether a stored quantity text is zero (`"0.000000"`, `"0"`), judged on the text itself, never on a
+ * localized figure (#304). Safe in client components, where `isNothing` from `@cpg/core` would pull in the ORM.
+ */
+export function isZeroQuantity(quantity: string): boolean {
+  return formQuantity(quantity) === "0";
+}
+
+/**
  * A stored six-decimal quantity in the reader's locale: `"-1234.500000"` is `-1,234.5` in English and
  * `-1234,5` in Polish, grouped as the locale groups. `Intl.NumberFormat` formats the decimal text itself,
  * every digit kept, so no binary float enters (R03). Every screen shows quantities and factors with it (#304).

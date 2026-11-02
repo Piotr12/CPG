@@ -2,10 +2,10 @@ import Link from "next/link";
 import { TriangleAlert } from "lucide-react";
 import type { Locale, MaterialSummary, ProductionComponent } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
-import { formQuantity, localeQuantity } from "../forms/form-labels";
+import { isZeroQuantity, localeQuantity } from "../forms/form-labels";
 import type { ProductionLabels } from "./labels";
 
-const isShort = (row: ProductionComponent) => formQuantity(row.shortage) !== "0";
+const isShort = (row: ProductionComponent) => !isZeroQuantity(row.shortage);
 
 /** Direct pinned quantities, in the reader's locale, compared with current physical stock, never projected or reserved inventory. A short row is marked in the warning tone. */
 export function ProductionRequirements({ components, labels: t, materials, tenant, locale }: { components: ProductionComponent[]; labels: ProductionLabels; materials: MaterialSummary[]; tenant: string; locale: Locale }) {

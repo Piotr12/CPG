@@ -75,9 +75,9 @@ describe("quantities in the reader's locale (#304)", () => {
   it("uses a decimal comma and groups with a no-break space for a Polish reader, factor included", async () => {
     await choosePreference(lena, "pl");
     await lena.waitUntil(`document.documentElement.lang === "pl"`);
-    expect(await read(`/stock?material=${ids.sheet}&location=${ids.plant}`, "12 345,5 kg")).toBe(true);
-    expect(await read(`/purchase-orders/${ids.order}`, "23 456,75 kg")).toBe(true);
-    expect(await read(`/boms/${ids.bom}`, "12 506,25 kg")).toBe(true);
+    expect(await read(`/stock?material=${ids.sheet}&location=${ids.plant}`, "12\u00a0345,5 kg")).toBe(true);
+    expect(await read(`/purchase-orders/${ids.order}`, "23\u00a0456,75 kg")).toBe(true);
+    expect(await read(`/boms/${ids.bom}`, "12\u00a0506,25 kg")).toBe(true);
     // The line was entered as 1000.5 cases, at 1 case = 12.5 kg: both figures follow the locale too.
     expect(await lena.evaluate<boolean>(showsText("1000,5 case"))).toBe(true);
     expect(await lena.evaluate<boolean>(showsText("1 case = 12,5 kg"))).toBe(true);

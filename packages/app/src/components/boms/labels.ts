@@ -1,4 +1,4 @@
-import type { BomComponentView, MaterialSummary } from "@cpg/core";
+import type { BomComponentView, Locale, MaterialSummary } from "@cpg/core";
 import {
   COMPONENT_COUNT_MESSAGE,
   DUPLICATE_COMPONENT_MESSAGE,
@@ -97,7 +97,7 @@ export function materialsById(materials: MaterialSummary[]): MaterialsById {
  * A line as the list summarizes it: "24 each 00000002 Bolt M8" (base quantity in the reader's locale
  * and unit, then the material, #304).
  */
-export function lineSummary(line: BomComponentView, materials: MaterialsById, locale: string): string {
+export function lineSummary(line: BomComponentView, materials: MaterialsById, locale: Locale): string {
   const material = materials.get(line.material)!;
   return `${localeQuantity(line.quantity, locale)} ${material.baseUnit} ${material.id} ${material.description}`;
 }
@@ -106,7 +106,7 @@ export function lineSummary(line: BomComponentView, materials: MaterialsById, lo
  * How a line was entered, when not in the base unit: "2 case at 1 case = 12 each", every figure in the
  * reader's locale (#304). Empty for a line entered in the base unit, where it would only repeat the quantity.
  */
-export function enteredAs(line: BomComponentView, materials: MaterialsById, labels: BomsLabels, locale: string): string {
+export function enteredAs(line: BomComponentView, materials: MaterialsById, labels: BomsLabels, locale: Locale): string {
   const { baseUnit } = materials.get(line.material)!;
   if (line.enteredUnit === baseUnit) return "";
   const shown = (figure: string) => localeQuantity(figure, locale);

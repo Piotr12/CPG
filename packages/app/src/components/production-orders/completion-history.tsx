@@ -4,15 +4,15 @@ import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-tab
 import { StatusBadge } from "@cpg/ui/backend/feedback/status-badge";
 import { Badge } from "@cpg/ui/components/badge";
 import { reversalStatusTone } from "../document-lifecycle/status-tone";
-import { fill, formQuantity, localeQuantity, type TenantContext } from "../forms/form-labels";
+import { fill, isZeroQuantity, localeQuantity, type TenantContext } from "../forms/form-labels";
 import { PageLinks } from "../layout/page-links";
 import { CompletionReversalDialog, type CompletionReversalTarget } from "./completion-reversal-dialog";
 import type { ProductionLabels } from "./labels";
 
 /** A signed variance as screens show it, in the reader's locale: `+3.5`, `-2`, or `0` for none (`+3,5` in Polish). */
-export function shownVariance(variance: string, locale: string): string {
+export function shownVariance(variance: string, locale: Locale): string {
   const shown = localeQuantity(variance, locale);
-  return variance.startsWith("-") || formQuantity(variance) === "0" ? shown : `+${shown}`;
+  return variance.startsWith("-") || isZeroQuantity(variance) ? shown : `+${shown}`;
 }
 
 interface Props {
@@ -33,7 +33,7 @@ export function CompletionHistory({ completions, page, materials, labels, locale
   const name = (code: string) => `${code} ${materials.find(({ id }) => id === code)!.description}`;
   const today = new Date().toISOString().slice(0, 10);
   const target = (row: CompletionView, order: NonNullable<Props["reversible"]>["order"]): CompletionReversalTarget => {
-    const used = row.lines.filter(({ actual }) => formQuantity(actual) !== "0");
+    const used = row.lines.filter(({ actual }) => !isZeroQuantity(actual));
     return {
       id: row.id, businessDate: row.businessDate, output: fill(t.reversal.output, { quantity: localeQuantity(row.quantity, locale), unit: row.baseUnit }),
       location: order.location, produced: localeQuantity(order.produced, locale), quantity: localeQuantity(row.quantity, locale), unit: row.baseUnit,

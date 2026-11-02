@@ -73,8 +73,8 @@ describe("StockScreen", () => {
 
     render(<StockScreen {...props} locale="pl" messages={pl} />);
     expect(figures()).toEqual({
-      balance: "12 345,5 each", from: "1234,5 each", to: "98 765,25 each", movements: ["+12 345,5 each", "-15,5 each"],
-      details: [`${pl.stock.entered}: 10 288,75 box · ${pl.stock.factor}: 1,2/1000,5`, `${pl.stock.after}: 23 456,25 each`],
+      balance: "12\u00a0345,5 each", from: "1234,5 each", to: "98\u00a0765,25 each", movements: ["+12\u00a0345,5 each", "-15,5 each"],
+      details: [`${pl.stock.entered}: 10\u00a0288,75 box · ${pl.stock.factor}: 1,2/1000,5`, `${pl.stock.after}: 23\u00a0456,25 each`],
     });
   });
 

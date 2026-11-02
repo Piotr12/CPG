@@ -69,7 +69,7 @@ describe("StatisticalUnitsPage", () => {
     mocks.getMessages.mockResolvedValue({ locale: "pl", messages: pl });
     render(await resolveServerComponents(page()));
     const table = within(screen.getByRole("table", { name: pl.statisticalUnits.label })).getAllByRole("row").slice(1);
-    expect(cells(table[0]).slice(1, 3)).toEqual(["1 each = 12 345,5 SU", "1 pallet = 1 234 567,25 SU"]);
+    expect(cells(table[0]).slice(1, 3)).toEqual(["1 each = 12\u00a0345,5 SU", "1 pallet = 1\u00a0234\u00a0567,25 SU"]);
   });
 
   it("renders not found for a missing tenant", async () => {

@@ -4,7 +4,7 @@
 **Agent:** Claude Code (Opus 5.5), `om-auto-fix-issue` → `om-auto-implement-spec` → `om-auto-create-pr`; lead with cezar workers
 **Source doc:** .ai/specs/implemented/2026-11-02--1303UTC-locale-quantities.md (spec PR #343)
 **Issue:** #304
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -65,8 +65,12 @@ Every worker reads `AGENTS.md`, `.ai/lessons.md` and the spec (`Source doc:` abo
 - 14:15 UTC — Unit B (worker c05b4b92) merged in `a891a728` after a diff review. Typecheck and lint exit 0, and the unit suite passes 391 files and 2,650 tests. The `list-quantity-sort` reader it flagged was already fixed in Unit D.
 - 14:30 UTC — Unit C (worker dd70a68e) merged in `a9bc5a7c` after a diff review. `locale` is now required on the production dialogs, the completion history, the requirements table and the ledger table.
 - 14:45 UTC — Full gate on `a9bc5a7c`: lint 0, typecheck 0, `test:coverage` 0 (665 files, 5,491 tests, 100%), build 0. `locale-quantities.test.ts` passed 2/2 on a local standalone server.
+- 15:00 UTC — On a local standalone server, 21 touched integration files passed (145 tests). QA screenshots in EN and PL are on the PR.
+- 15:20 UTC — A fresh-context review approves, with Lows only. They are fixed: a client-safe `isZeroQuantity`, `\u00a0` escapes, and `Locale`-typed helpers. Gate on the fix: lint 0, typecheck 0, `test:coverage` 0 (665 files, 5,492 tests), build 0. `locale-quantities.test.ts` passed 2/2 on a fresh server with the new build.
 
 ## Progress
+
+PR: #346
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
