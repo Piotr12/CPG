@@ -58,7 +58,7 @@ describe("purchase requisitions and orders in the UI", () => {
     expect(table[1][7]).toBe("Completed");
     // Three are open, with nothing converted yet.
     expect(table.slice(2).map((row) => [row[0], row[1], row[2], row[3], row[4], row[5], row[7]])).toEqual([
-      ["00000003", "00000007 Steel sheet 1.0 mm", "00000001 Main plant, Wrocław", "1000 kg", "0 kg", "1000 kg", "Open"],
+      ["00000003", "00000007 Steel sheet 1.0 mm", "00000001 Main plant, Wrocław", "1,000 kg", "0 kg", "1,000 kg", "Open"],
       ["00000004", "00000013 Paint, blue RAL 5010", "00000001 Main plant, Wrocław", "40 l", "0 l", "40 l", "Open"],
       ["00000005", "00000014 Welding wire 0.8 mm", "00000001 Main plant, Wrocław", "30 kg", "0 kg", "30 kg", "Open"],
     ]);

@@ -149,7 +149,7 @@ describe("forecasts (E08-S03)", () => {
     for (const [, , date, quantity] of rows) {
       expect(date > today).toBe(true);
       expect([0, 6]).not.toContain(new Date(`${date}T00:00:00Z`).getUTCDay());
-      expect(quantity).toMatch(/^\d+ each$/);
+      expect(quantity).toMatch(/^\d{1,3}(,\d{3})* each$/); // grouped as an English reader reads it (#304)
     }
   });
 

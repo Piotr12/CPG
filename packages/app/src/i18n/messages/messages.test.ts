@@ -26,7 +26,6 @@ describe("dictionaries", () => {
     expect(copied).toEqual([
       "home/title",
       "materials/columns/status",
-      "materials/conversions/tiny",
       "locations/columns/id",
       "locations/columns/status",
       "customers/columns/id",

@@ -51,6 +51,12 @@ const DAY_FIGURES = [
   "shortage",
 ] as const;
 
+/**
+ * The figures pinned to the table's right edge from `lg` up (#311): the balance and the shortage, in view
+ * with the date however many figures scroll between them.
+ */
+const PINNED_DAY_FIGURES: ReadonlySet<(typeof DAY_FIGURES)[number]> = new Set(["projectedBefore", "shortage"]);
+
 /** The figures a week shows (E18-S02): the day table's, with the shortage replaced by the weakest day's two. */
 const WEEK_FIGURES = [
   "firmDemand",
@@ -167,7 +173,10 @@ function PlanExcess({ plan, locale, labels: t }: { plan: MrpPlanView; locale: Lo
   return <p className="text-sm text-muted-foreground" data-mrp-excess>{fill(t.excess, { quantity: localeQuantity(plan.excess, locale), unit: plan.baseUnit })}</p>;
 }
 
-/** One pair's 90 days, today first, every figure in view at any width: the table scrolls sideways. */
+/**
+ * One pair's 90 days, today first. The table scrolls sideways in its own region; from `lg` up the balance
+ * and the shortage stay pinned at its right edge while the other figures scroll (#311).
+ */
 function PlanDays({ plan, locale, labels: t }: { plan: MrpPlanView; locale: Locale; labels: Messages["mrp"]["report"] }) {
   const figure = (key: (typeof DAY_FIGURES)[number]): DataTableColumn<MrpBucketView> => ({
     id: key,
@@ -175,6 +184,7 @@ function PlanDays({ plan, locale, labels: t }: { plan: MrpPlanView; locale: Loca
     kind: "quantity",
     // Headers like "Projected before proposals" wrap; past what fits beside the menu, the table scrolls in its own region.
     className: "whitespace-normal",
+    pin: PINNED_DAY_FIGURES.has(key) ? "end" : undefined,
     cell: (day) => <span data-mrp-figure={key} className={cn(negative(day[key]) && "font-medium text-danger")}>{localeQuantity(day[key], locale)}</span>,
   });
   const columns: DataTableColumn<MrpBucketView>[] = [
@@ -217,8 +227,9 @@ function PlanWeeks({ plan, weeks, locale, labels: t }: { plan: MrpPlanView; week
       </div>
     ) },
     ...WEEK_FIGURES.map((key): DataTableColumn<MrpWeekView> => ({ id: key, header: t.figures[key], kind: "quantity", className: "whitespace-normal", cell: (week) => amount(key, week[key]) })),
-    { id: "lowestProjectedBefore", header: t.weekFigures.lowestProjectedBefore, kind: "quantity", className: "whitespace-normal", cell: (week) => amount("lowestProjectedBefore", week.lowestProjectedBefore) },
-    { id: "peakShortage", header: t.weekFigures.peakShortage, kind: "quantity", className: "whitespace-normal", cell: (week) => amount("peakShortage", week.peakShortage) },
+    // The week's balance and shortage, pinned as the day's are (#311, spec Q2).
+    { id: "lowestProjectedBefore", header: t.weekFigures.lowestProjectedBefore, kind: "quantity", className: "whitespace-normal", pin: "end", cell: (week) => amount("lowestProjectedBefore", week.lowestProjectedBefore) },
+    { id: "peakShortage", header: t.weekFigures.peakShortage, kind: "quantity", className: "whitespace-normal", pin: "end", cell: (week) => amount("peakShortage", week.peakShortage) },
     { id: "warnings", header: t.warnings, kind: "text", className: "whitespace-normal", cell: (week) => <MrpMarks marks={week.marks} unit={plan.baseUnit} locale={locale} labels={t.marks} /> },
   ];
   return (

@@ -8,10 +8,29 @@ import { productionLabels } from "./labels";
 
 const labels = productionLabels(en);
 const t = labels.completion;
-const props = { materials: completionMaterials, labels, path: "/admin/test/production-orders/00000001" };
+const props = { materials: completionMaterials, labels, locale: "en" as const, path: "/admin/test/production-orders/00000001" };
 
-it("signs variances and shows none as 0", () => {
-  expect([shownVariance("-2.000000"), shownVariance("3.500000"), shownVariance("0.000000")]).toEqual(["-2", "+3.5", "0"]);
+it("signs variances in the reader's locale and shows none as 0", () => {
+  expect([shownVariance("-2.000000", "en"), shownVariance("3.500000", "en"), shownVariance("0.000000", "en")]).toEqual(["-2", "+3.5", "0"]);
+  expect([shownVariance("-12345.500000", "en"), shownVariance("12345.500000", "en")]).toEqual(["-12,345.5", "+12,345.5"]);
+  expect([shownVariance("-12345.500000", "pl"), shownVariance("12345.500000", "pl"), shownVariance("0.000000", "pl")]).toEqual(["-12\u00a0345,5", "+12\u00a0345,5", "0"]);
+});
+
+it.each([
+  ["en", en, "12,345.5", "12,000.25", "-345.25", "+1,234.5"],
+  ["pl", pl, "12 345,5", "12 000,25", "-345,25", "+1234,5"],
+] as const)("shows the output, expected, actual and variance in %s", (locale, messages, quantity, actual, less, more) => {
+  const big = { ...completionView, quantity: "12345.500000", lines: [
+    { ...completionView.lines[0], expected: "12345.500000", actual: "12000.250000", variance: "-345.250000" },
+    { ...completionView.lines[2], expected: "0.000000", actual: "1234.500000", variance: "1234.500000" },
+  ] };
+  render(<CompletionHistory {...props} labels={productionLabels(messages)} locale={locale} completions={[big]} page={1} />);
+  const cells = within(screen.getByRole("table")).getAllByRole("cell").map((cell) => cell.textContent!.replace(/\u00a0/g, " "));
+  expect(cells[2]).toBe(`${quantity} each`);
+  const line = messages.productionOrders.completion.line;
+  const filled = (material: string, expected: string, done: string, unit: string, variance: string) =>
+    line.replace("{material}", material).replace("{expected}", expected).replace("{actual}", done).replace("{unit}", unit).replace("{variance}", variance);
+  expect(cells[3]).toBe(`${filled("00000006 Cocoa", quantity, actual, "kg", less)}${filled("00000008 Milk", "0", more.slice(1), "kg", more)}${messages.productionOrders.completion.extra}`);
 });
 
 it("lists each completion's output or waste and every material's expected, actual and variance (PRD-013, PRD-015, PRD-018)", () => {

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { SortDirection } from "@cpg/core/validators/lists/list-query.schema";
 import type { PlanningParameterSort } from "@cpg/core/validators/planning-parameters/planning-parameter-list.schema";
 import { en } from "../../i18n/messages/en";
+import { pl } from "../../i18n/messages/pl";
 import { PlanningParametersScreen } from "./planning-parameters-screen";
 
 const dialog = vi.hoisted(() => vi.fn());
@@ -42,6 +43,17 @@ const renderScreen = (sets: object[], admin = true, list = LIST) =>
   );
 
 describe("PlanningParametersScreen", () => {
+  it.each([
+    ["en", en, "12,345.5 each", "1,234.000001 each"],
+    ["pl", pl, "12\u00a0345,5 each", "1234,000001 each"],
+  ] as const)("shows the minimum and the multiple in the reader's locale, every digit kept (%s, #304)", (locale, messages, minimum, multiple) => {
+    render(<PlanningParametersScreen tenant={TENANT} sets={[{ ...set("buy"), minimumQuantity: "12345.500000", lotMultiple: "1234.000001" }] as never}
+      materials={MATERIALS} locations={LOCATIONS} locale={locale} messages={messages} admin={false} {...LIST} />);
+    const cells = screen.getAllByRole("cell").map((cell) => cell.textContent);
+    expect(cells).toContain(minimum);
+    expect(cells).toContain(multiple);
+  });
+
   it("heads the list with the one h1 and the admin's Add, then the table with right-aligned quantities", () => {
     renderScreen([set("make")]);
 

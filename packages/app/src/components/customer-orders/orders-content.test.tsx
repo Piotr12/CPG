@@ -1,4 +1,4 @@
-import { render, screen, within, cleanup } from "@testing-library/react";
+import { fireEvent, render, screen, within, cleanup } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveServerComponents } from "../../../../../tests/setup/server-components";
 import { customers, locations, materials, order, tenant } from "../../../../../tests/setup/customer-orders";
@@ -145,6 +145,32 @@ describe("customer order pages", () => {
     expect(screen.queryByRole("button", { name: "Create shipment" })).toBeNull();
     cleanup(); screenOf({ order: { ...order, status: "closed-early" } });
     expect(screen.queryByRole("button", { name: "Create shipment" })).toBeNull();
+  });
+  it("shows every figure in the reader's locale: amounts, the entered conversion, shipment lines and lifecycle quantities (#304)", () => {
+    const big = { ...order, lines: [{ ...order.lines[0], quantity: "32345.500000", enteredQuantity: "12345.5", denominator: "10000.25", numerator: "12345.125",
+      fulfilled: "10000.250000", abandoned: "10000.000000", posted: true }] };
+    const shipment = { id: "00000002", customerOrder: order.id, customer: "00000001", location: "00000001", plannedDate: "2027-01-02", status: "open" as const, version: 1, createdAt: order.createdAt,
+      lines: [{ line: 1, orderLine: order.lines[0].id, material: "00000005", quantity: "32345.500000", enteredQuantity: "32345.5", enteredUnit: "each", numerator: "1", denominator: "1",
+        issued: "10000.250000", posted: true, toIssue: "0.000000" }] };
+    const screenOf = (locale: "en" | "pl", messages: typeof en) =>
+      render(<OrdersScreen tenant={tenant} orders={[]} order={big} shipments={[shipment]} customers={customers} locations={locations} materials={materials} units={{}} locale={locale} messages={messages} />);
+    const cells = (name: string) => within(screen.getByRole("table", { name })).getAllByRole("cell").map((cell) => cell.textContent);
+    const abandoned = (button: RegExp, list: string) => {
+      fireEvent.click(screen.getByRole("button", { name: button }));
+      return within(screen.getByRole("list", { name: list })).getAllByRole("listitem").map((item) => item.textContent);
+    };
+
+    screenOf("en", en);
+    expect(cells("Lines")).toEqual(["00000005 Cabinet", "32,345.5 each", "12,345.5 case (10,000.25 case = 12,345.125 each)", "2027-01-04", "10,000.25", "12,345.25", "Open", "10,000",
+      "Close line early…"]);
+    expect(cells("Shipments")[3]).toBe("Line 1: 10,000.25 of 32,345.5 each");
+    expect(abandoned(/^Close order early…/, en.lifecycle.abandoned)).toEqual(["Cabinet: 12,345.25 each"]);
+
+    cleanup(); screenOf("pl", pl);
+    const lines = cells("Pozycje");
+    expect([lines[1], lines[2], lines[4], lines[5], lines[7]]).toEqual(["32\u00a0345,5 each", "12\u00a0345,5 case (10\u00a0000,25 case = 12\u00a0345,125 each)", "10\u00a0000,25", "12\u00a0345,25", "10\u00a0000"]);
+    expect(cells("Wysyłki")[3]).toBe("Pozycja 1: 10\u00a0000,25 z 32\u00a0345,5 each");
+    expect(abandoned(/^Zamknij zamówienie wcześniej…/, pl.lifecycle.abandoned)).toEqual(["Cabinet: 12\u00a0345,25 each"]);
   });
   it("returns not-found for an unknown tenant or order", async () => {
     mocks.tenantScope.mockRejectedValueOnce(new mocks.AppError("TENANT_NOT_FOUND"));

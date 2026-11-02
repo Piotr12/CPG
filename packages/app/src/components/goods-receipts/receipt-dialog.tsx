@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { PostedReceiptView } from "@cpg/core";
+import type { Locale, PostedReceiptView } from "@cpg/core";
 import { receiptFormSchema } from "@cpg/core/validators/goods-receipts/goods-receipt.schema";
 import { Callout } from "@cpg/ui/backend/feedback/callout";
 import { Button } from "@cpg/ui/components/button";
@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { postReceipt } from "../../app/admin/[tenant]/purchase-orders/[id]/actions";
 import { TALL_DIALOG, type TenantContext } from "../forms/form-labels";
 import { LineQuantitiesForm } from "../forms/line-quantities-form";
-import { errorFormatter, fieldErrorFormatter, fill, shownQuantity, type ReceiptLineChoice, type ReceiptsLabels } from "./labels";
+import { errorFormatter, fieldErrorFormatter, fill, localeQuantity, type ReceiptLineChoice, type ReceiptsLabels } from "./labels";
 
 interface ReceiptDialogProps {
   context: TenantContext;
@@ -23,6 +23,8 @@ interface ReceiptDialogProps {
   baseUnits: Record<number, string>;
   /** Whether the order takes receipts (it is Open). A post that completes it hides the button, never the notice. */
   canPost: boolean;
+  /** The reader's locale, for the excess figures (#304). */
+  locale: Locale;
 }
 
 /**
@@ -30,7 +32,7 @@ interface ReceiptDialogProps {
  * closes and a notice names the receipt and any line that received more than was outstanding: an
  * excess is accepted, and said (BUY-015).
  */
-export function ReceiptDialog({ context, purchaseOrder, location, labels, lines, baseUnits, canPost }: ReceiptDialogProps) {
+export function ReceiptDialog({ context, purchaseOrder, location, labels, lines, baseUnits, canPost, locale }: ReceiptDialogProps) {
   const [open, setOpen] = useState(false);
   const [posted, setPosted] = useState<PostedReceiptView | null>(null);
   const close = () => setOpen(false);
@@ -83,7 +85,7 @@ export function ReceiptDialog({ context, purchaseOrder, location, labels, lines,
                 <li key={line}>
                   {fill(labels.overReceipt, {
                     line: String(line),
-                    excess: shownQuantity(excess),
+                    excess: localeQuantity(excess, locale),
                     baseUnit: baseUnits[line],
                   })}
                 </li>
