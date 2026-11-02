@@ -1,26 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { MrpDemandRoot, MrpPlannedComponentDemand } from "../mrp-result";
-import { compareRequirements, RequirementQueues, requirementsByDate, type Requirement, type RequirementLists } from "./requirements";
+import { compareRequirements, RequirementQueues, requirementsByDate, rootOf, unserved, type Requirement, type RequirementLists } from "./requirements";
 
-const root = (kind: MrpDemandRoot["kind"], originalDate: string, overrides: Partial<MrpDemandRoot> = {}): MrpDemandRoot => ({
-  kind,
-  material: "M1",
-  originalDate,
-  document: null,
-  position: null,
-  ...overrides,
-});
-const requirement = (of: MrpDemandRoot, overrides: Partial<Requirement> = {}): Requirement => ({
-  kind: of.kind === "safety-target" ? "planned-component" : of.kind,
-  date: "2026-10-05",
-  root: of,
-  via: "",
-  parentNeedDate: "",
-  provisional: false,
-  required: 1n,
-  outstanding: 1n,
-  ...overrides,
-});
+const root = (kind: MrpDemandRoot["kind"], originalDate: string): MrpDemandRoot => ({ kind, material: "M1", originalDate, document: null, position: null });
 const need = (provisional: boolean, quantity: bigint): MrpPlannedComponentDemand => ({
   parent: "P1",
   parentNeedDate: "2026-10-07",
@@ -44,47 +26,72 @@ const lists = (plannedComponentDemand: MrpPlannedComponentDemand[]): Requirement
 
 describe("compareRequirements (#327)", () => {
   it("orders the pair's own requirements as before: rank, original date, kind, document, position", () => {
-    const sorted = [
-      requirement(root("forecast", "2026-10-05")),
-      requirement(root("customer-order", "2026-10-06", { document: "A", position: 1 })),
-      requirement(root("customer-order", "2026-10-05", { document: "B", position: 1 })),
-      requirement(root("customer-order", "2026-10-05", { document: "A", position: 2 })),
-      requirement(root("transfer", "2026-10-05", { document: "A" })),
-      requirement(root("component", "2026-10-05", { document: "A" })),
-    ].sort(compareRequirements);
-    expect(sorted.map(({ kind, root: { originalDate, document, position } }) => [kind, originalDate.slice(-2), document, position])).toEqual([
+    const day = "2026-10-05";
+    const pair: RequirementLists = {
+      ...lists([]),
+      firmDemand: [
+        { order: "A", position: 1, material: "M1", location: "L1", requiredDate: "2026-10-06", date: day, quantity: 1n },
+        { order: "B", position: 1, material: "M1", location: "L1", requiredDate: day, date: day, quantity: 1n },
+        { order: "A", position: 2, material: "M1", location: "L1", requiredDate: day, date: day, quantity: 1n },
+      ],
+      forecastDemand: [{ material: "M1", location: "L1", forecastDate: day, date: day, forecastQuantity: 1n, quantity: 1n }],
+      transfersOut: [{ transfer: "A", material: "M1", location: "L1", stage: "planned", plannedDate: day, date: day, quantity: 1n, overdue: false }],
+      componentDemand: [{ order: "A", material: "M1", location: "L1", plannedStart: day, date: day, quantity: 1n, overdue: false }],
+    };
+    const due = requirementsByDate(pair).get(day)!;
+    const expected = [
       ["component", "05", "A", null],
       ["transfer", "05", "A", null],
       ["customer-order", "05", "A", 2],
       ["customer-order", "05", "B", 1],
       ["customer-order", "06", "A", 1],
       ["forecast", "05", null, null],
-    ]);
+    ];
+    const keys = (list: Requirement[]) => list.map((one) => [one.kind, one.originalDate.slice(-2), rootOf(one).document, rootOf(one).position]);
+    expect(keys(due)).toEqual(expected);
+    expect(keys([...due].reverse().sort(compareRequirements))).toEqual(expected);
   });
 });
 
 describe("requirementsByDate (#327)", () => {
-  it("selects provisional parents' needs apart, alone or with the rest, and sums shares with an equal key", () => {
-    const pair = lists([need(true, 3n), need(true, 4n), need(false, 5n)]);
-    const quantities = (provisional: "exclude" | "only" | "include") =>
-      requirementsByDate(pair, provisional).get("2026-10-05")!.map(({ kind, provisional: of, required }) => [kind, of, required]);
-    expect(quantities("exclude")).toEqual([["customer-order", false, 2n], ["planned-component", false, 5n]]);
-    expect(quantities("only")).toEqual([["planned-component", true, 7n]]);
-    expect(quantities("include")).toEqual([["customer-order", false, 2n], ["planned-component", false, 5n], ["planned-component", true, 7n]]);
+  it("lists one requirement per share, its root kept, and sums shares with an equal key, provisional parents' apart", () => {
+    const due = requirementsByDate(lists([need(true, 3n), need(true, 4n), need(false, 5n)])).get("2026-10-05")!;
+    expect(due.map(({ kind, provisional, required }) => [kind, provisional, required])).toEqual([
+      ["customer-order", false, 2n],
+      ["planned-component", false, 5n],
+      ["planned-component", true, 7n],
+    ]);
+    expect(rootOf(due[1])).toEqual(root("forecast", "2026-10-07"));
+    expect(rootOf(due[0])).toEqual({ kind: "customer-order", material: "M1", originalDate: "2026-10-05", document: "00000001", position: 1 });
+  });
+
+  it("serves a shared list afresh after `unserved`", () => {
+    const due = requirementsByDate(lists([need(false, 5n)]));
+    const queues = new RequirementQueues();
+    for (const one of due.get("2026-10-05")!) queues.push(one);
+    expect(queues.serve(3n)).toBe(0n);
+    unserved(due);
+    expect(due.get("2026-10-05")!.map(({ outstanding }) => outstanding)).toEqual([2n, 5n]);
   });
 });
 
 describe("RequirementQueues (#327)", () => {
   it("serves in priority order whatever the push order, reports each quantity served and returns what is left", () => {
+    const order = (code: string, requiredDate: string, quantity: bigint) => ({ order: code, position: 1, material: "M1", location: "L1", requiredDate, date: requiredDate, quantity });
+    const pair: RequirementLists = {
+      ...lists([]),
+      firmDemand: [order("A", "2026-10-06", 2n), order("B", "2026-10-09", 3n)],
+      componentDemand: [{ order: "C", material: "M1", location: "L1", plannedStart: "2026-10-09", date: "2026-10-09", quantity: 1n, overdue: false }],
+    };
+    const due = requirementsByDate(pair);
     const queues = new RequirementQueues();
-    const later = requirement(root("customer-order", "2026-10-09", { document: "B" }), { required: 3n, outstanding: 3n });
-    const earlier = requirement(root("customer-order", "2026-10-06", { document: "A" }), { required: 2n, outstanding: 2n });
-    const first = requirement(root("component", "2026-10-09", { document: "C" }), { required: 1n, outstanding: 1n });
+    // Pushed latest first, as a share dated at its root can be: B, then C, then A.
+    const [later, first] = due.get("2026-10-09")!.slice().reverse();
     queues.push(later);
-    queues.push(earlier);
     queues.push(first);
+    queues.push(due.get("2026-10-06")![0]);
     const served: [string | null, bigint][] = [];
-    expect(queues.serve(4n, ({ root: { document } }, quantity) => served.push([document, quantity]))).toBe(0n);
+    expect(queues.serve(4n, (one, quantity) => served.push([rootOf(one).document, quantity]))).toBe(0n);
     expect(served).toEqual([["C", 1n], ["A", 2n], ["B", 1n]]);
     expect(queues.serve(5n)).toBe(3n);
     expect(later.outstanding).toBe(0n);

@@ -23,6 +23,7 @@ import { compareCodes, comparePairs, pairKey } from "./projection/pairs";
 import { emptyFlows, lowestDependableBalances, projectBuckets, type MrpLedger } from "./projection/project-buckets";
 import { pegProposals } from "./priority/peg-proposals";
 import { rankShortages } from "./priority/rank-shortages";
+import { requirementsByDate, type Requirement } from "./priority/requirements";
 import { productionMovements } from "./supply/production-orders";
 import { purchasingSupply } from "./supply/purchasing-supply";
 import { compareExceptions } from "./exceptions/compare-exceptions";
@@ -230,10 +231,14 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
     // Every pair of the level is complete: only a lower level explodes into it. Traced before any claim, on the
     // sized quantities and need dates, so feasibility changes no share (#327).
     const sharesOf = new Map<TimedProposal, readonly MrpDemandShare[]>();
+    /** A traced pair's requirements, which its ranking serves again. */
+    const dueOf = new Map<PairDraft, Map<string, Requirement[]>>();
     for (const { draft, buckets, replenished } of sized) {
       const makes = replenished.proposals.filter(({ kind }) => kind === "production-order");
       if (makes.length === 0 && replenished.provisional.length === 0) continue;
-      const pegged = pegProposals({ ...draft, buckets }, makes, replenished.provisional);
+      const due = requirementsByDate(draft);
+      dueOf.set(draft, due);
+      const pegged = pegProposals({ ...draft, buckets }, makes, replenished.provisional, due);
       makes.forEach((proposal, index) => sharesOf.set(proposal, pegged.proposals[index]));
       replenished.provisional.forEach((proposal, index) => sharesOf.set(proposal, pegged.provisional[index]));
     }
@@ -306,7 +311,7 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
       const { flows, ...plan } = draft;
       if (replenished.exception) exceptions.push(replenished.exception);
       const buckets = projectBuckets(plan.physical, flows);
-      plans.push({ ...plan, buckets, shortages: rankShortages({ ...plan, buckets }) });
+      plans.push({ ...plan, buckets, shortages: rankShortages({ ...plan, buckets }, dueOf.get(draft)) });
     }
   }
   plans.sort(comparePairs);
