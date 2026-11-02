@@ -181,7 +181,10 @@ describe("MrpProposals", () => {
     const fallback = buy({
       id: "f", kind: "production-order", executable: false, quantity: "6.000000", bom: "00000005", bomRevision: 2,
       rejectedBoms: [
-        { bom: "00000004", revision: 1, reason: "shortage", shortages: [{ material: "00000013", required: "6.000000", available: "5.000000", shortage: "1.000000" }] },
+        { bom: "00000004", revision: 1, reason: "shortage", shortages: [
+          { material: "00000013", required: "6.000000", available: "5.000000", shortage: "1.000000" },
+          { material: "00000098", required: "2.000000", available: "0.000000", shortage: "2.000000" },
+        ] },
         { bom: "00000007", revision: 3, reason: "inactive-component", materials: ["00000021", "00000099"] },
       ],
     });
@@ -200,8 +203,11 @@ describe("MrpProposals", () => {
       const rejections = within(make).getByRole("list", { name: "Rejected BOMs" });
       expect([...rejections.querySelectorAll(":scope > li")].map((item) => item.getAttribute("data-mrp-rejection"))).toEqual(["shortage", "inactive-component"]);
       expect(rejections.querySelector(":scope > li")!.firstChild?.textContent).toBe("BOM 00000004 / revision 1 — Component shortage");
-      expect(rejections.querySelector("[data-mrp-shortage]")?.textContent).toBe("00000013 Sugar: needs 6 KG, dependable 5 KG, short 1 KG");
-      // A component the screen doesn't know shows its code, without a unit.
+      // A component the screen doesn't know shows its code, its quantities without a unit.
+      expect([...rejections.querySelectorAll("[data-mrp-shortage]")].map((line) => line.textContent)).toEqual([
+        "00000013 Sugar: needs 6 KG, dependable 5 KG, short 1 KG",
+        "00000098: needs 2, dependable 0, short 2",
+      ]);
       expect(rejections.querySelectorAll(":scope > li")[1].textContent).toBe("BOM 00000007 / revision 3 — Inactive BOM Component: 00000021 Colouring, 00000099");
     });
 

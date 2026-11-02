@@ -54,22 +54,30 @@ To get there, the run stores a feasible fallback's rejections as `BOM_REJECTIONS
 - 06:52 Spec written (`om-auto-write-spec`). A fresh-context review found nothing Critical, and its findings are folded in. Spec PR #334 is open, and it also deletes the stale active copy of the #283 spec that fails `tests/ai-filenames.test.ts` on `main`.
 - 07:02 Branched `feat/mrp-report-explanations` from `origin/main`, with the spec carried straight into `implemented/` (lesson 2026-10-23) and the same stale-copy deletion. This plan is the run log.
 
+- 07:09 Phase 1 (core) landed in one commit: the two steps share the rows and the read. Deviation: `exceptionRejections` keeps Missing Usable BOM's notation order, since its `inactive` list is already in engine order. Nine service tests asserted exact shapes, and each now asserts `rejectedBoms`, `order` or the new row; two of them (LFC-025, the rerun) became real assertions of a fallback's stored rejection. The worst-case stall measured 247 to 275 ms here against main's 257 to 274 ms on the same machine, with identical row counts: not this change.
+- 07:19 Phase 2: the copy, `mrp-exception-text`, `MrpBomRejections`/`WhyBom`, `MrpExplanations`, the at-risk column and help. The Polish copy follows the help topic's glossary ("tymczasowy", "BOM-u"). `messages.test.ts` lists two new shared column headers (BOM, Status).
+- 07:25 Phase 3: one shared setup (`tests/integration/mrp-explanations.ts`) at a location of its own, built before each file's MRP run. Docker unavailable, so the integration files ran against a standalone build. Both report files passed alone (21), but with every MRP file on one server `mrp-report.test.ts` lost its "cabinet sorts last" premise, because the setup's materials were newer. The setup now runs first, and all six MRP files pass (49). The design-token test refused half-step spacing.
+- 07:27 Screenshots from the standalone server: the Explanations part, Why this BOM opened, and 390 px with no page overflow.
+- 07:34 Gate: `npm run lint` 0, `npm run typecheck` 0, `npm run build` 0, `npm run test:coverage` 0 (660 files, 5,360 tests, 100% after adding the unknown-component shortage line to `mrp-proposals.test.tsx`; the first run stopped at 99.98% branches).
+
 ## Progress
+
+PR: #335
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Core
 
-- [ ] 1.1 Rejections: store and parse
-- [ ] 1.2 Service: write and read BOM_REJECTIONS and rejectedBoms
+- [x] 1.1 Rejections: store and parse — e296fb0b
+- [x] 1.2 Service: write and read BOM_REJECTIONS and rejectedBoms — e296fb0b
 
 ### Phase 2: App
 
-- [ ] 2.1 Copy: EN/PL texts and mrp-exception-text
-- [ ] 2.2 Screen: Why this BOM, Explanations, at-risk column
-- [ ] 2.3 Help topic
+- [x] 2.1 Copy: EN/PL texts and mrp-exception-text — bab955d5
+- [x] 2.2 Screen: Why this BOM, Explanations, at-risk column — bab955d5
+- [x] 2.3 Help topic — bab955d5
 
 ### Phase 3: Integration and docs
 
-- [ ] 3.1 Integration tests
-- [ ] 3.2 Docs, catalogue and spec notes
+- [x] 3.1 Integration tests — 5f84a9c9, 442f4a66
+- [x] 3.2 Docs, catalogue and spec notes — 03cf72dd
