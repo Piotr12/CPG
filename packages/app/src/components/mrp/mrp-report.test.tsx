@@ -52,9 +52,9 @@ const renderReport = (view: MrpLatestView, selected: Partial<MrpReportPageQuery>
 const pairs = () => within(screen.getByRole("table", { name: en.mrp.report.label }));
 
 /** Each pinned header's text and its right offset (#311). */
-const pinned = (table: ReturnType<typeof within>) =>
+const pinned = (table: HTMLElement) =>
   Object.fromEntries(
-    table
+    within(table)
       .getAllByRole("columnheader")
       .filter((header) => header.classList.contains("lg:sticky"))
       .map((header) => [header.textContent, [...header.classList].find((name) => name.startsWith("lg:right-"))]),
@@ -144,9 +144,9 @@ describe("MrpReport", () => {
 
   it("pins the balance and the shortage to the day table's right edge from lg up, and no other column (#311)", () => {
     renderReport(report({ total: 1, plans: [sheet] }), { material: "00000012", location: "00000003", page: 1 });
-    const table = within(screen.getByRole("table", { name: en.mrp.report.planLabel }));
+    const table = screen.getByRole("table", { name: en.mrp.report.planLabel });
     expect(pinned(table)).toEqual({ "Projected before proposals": "lg:right-32", Shortage: "lg:right-0" });
-    const row = table.getAllByRole("row")[1];
+    const row = within(table).getAllByRole("row")[1];
     expect(row.querySelector("[data-mrp-figure=shortage]")!.closest("td")!.classList).toContain("lg:sticky");
     expect(row.querySelector("[data-mrp-figure=projectedAfter]")!.closest("td")!.classList).not.toContain("lg:sticky");
   });
@@ -273,9 +273,9 @@ describe("MrpReport", () => {
 
     it("pins the week's lowest balance and peak shortage to the table's right edge from lg up, and no other column (#311)", () => {
       renderReport(report({ total: 1, plans: [weekly], bucket: "week" }), { material: "00000012", location: "00000003", bucket: "week" });
-      const table = within(screen.getByRole("table", { name: en.mrp.report.weekLabel }));
+      const table = screen.getByRole("table", { name: en.mrp.report.weekLabel });
       expect(pinned(table)).toEqual({ "Lowest projected balance": "lg:right-32", "Peak shortage": "lg:right-0" });
-      expect(table.getAllByRole("row")[1].querySelector("[data-mrp-figure=peakShortage]")!.closest("td")!.classList).toContain("lg:sticky");
+      expect(within(table).getAllByRole("row")[1].querySelector("[data-mrp-figure=peakShortage]")!.closest("td")!.classList).toContain("lg:sticky");
     });
 
     it("states the excess in the Week view too (E19-S02)", () => {
