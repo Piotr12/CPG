@@ -1,11 +1,23 @@
 import { formatDecimal } from "../../quantities/decimal";
-import { parseSignedQuantity } from "../../stock/signed-quantity";
 import { planExcess, type ExcessDay } from "../excess/plan-excess";
 
 /** One stored day of a plan, as far as its summary reads it: six-decimal texts, signed where negative. */
 export interface SummarizedDay extends Record<keyof ExcessDay, string> {
   date: string;
   shortage: string;
+}
+
+/** A stored figure, as `formatSignedQuantity` wrote it. */
+const FIGURE = /^(-?)(\d+)\.(\d{6})$/;
+
+/**
+ * A stored figure as exact micro-units. Unlike `parseSignedQuantity`, it has no twelve-digit limit: a balance
+ * may sum needs beyond what one entry may hold, as two lines of 999,999,999,999 do.
+ */
+function figure(text: string): bigint {
+  const [, sign, whole, fraction] = FIGURE.exec(text)!;
+  const value = BigInt(whole) * 1_000_000n + BigInt(fraction);
+  return sign ? -value : value;
 }
 
 /** What the MRP report's pair list shows of one plan (E18-S01, spec Q4 and Q7). */
@@ -26,14 +38,14 @@ export interface MrpPlanSummary {
  */
 export function summarizePlan(days: readonly [SummarizedDay, ...SummarizedDay[]]): MrpPlanSummary {
   let lowest = days[0];
-  for (const day of days) if (parseSignedQuantity(day.projectedBefore)! < parseSignedQuantity(lowest.projectedBefore)!) lowest = day;
-  const short = days.find((day) => parseSignedQuantity(day.shortage)! > 0n);
+  for (const day of days) if (figure(day.projectedBefore) < figure(lowest.projectedBefore)) lowest = day;
+  const short = days.find((day) => figure(day.shortage) > 0n);
   const read = days.map((day) => ({
-    tentativeSupply: parseSignedQuantity(day.tentativeSupply)!,
-    dependableSupply: parseSignedQuantity(day.dependableSupply)!,
-    transferIn: parseSignedQuantity(day.transferIn)!,
-    safetyTarget: parseSignedQuantity(day.safetyTarget)!,
-    projectedBefore: parseSignedQuantity(day.projectedBefore)!,
+    tentativeSupply: figure(day.tentativeSupply),
+    dependableSupply: figure(day.dependableSupply),
+    transferIn: figure(day.transferIn),
+    safetyTarget: figure(day.safetyTarget),
+    projectedBefore: figure(day.projectedBefore),
   }));
   // Never negative, so `formatDecimal` (lesson 2026-11-01): one rule for a stored run and the engine's buckets.
   return { lowestProjectedBefore: lowest.projectedBefore, firstShortageDate: short?.date ?? null, excess: formatDecimal(planExcess(read), { fixed: true }) };

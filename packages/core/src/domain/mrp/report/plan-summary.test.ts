@@ -45,4 +45,13 @@ describe("summarizePlan", () => {
     // Capped at the open supply: 101.000001 arrived, the last day is 1,000 above its target.
     expect(summarizePlan([days[0], days[1], { ...days[2], projectedBefore: "1002.000000" }]).excess).toBe("101.000001");
   });
+
+  it("reads stored figures past what one entry may hold, as a balance summing two of the largest needs (R03)", () => {
+    const days = [
+      day("2026-10-01", "5.000000", zero, { dependableSupply: "1999999999999.000000" }),
+      day("2026-10-02", "-1999999999998.000000", "1999999999998.000000"),
+      day("2026-10-03", "2000000000001.500000"),
+    ] as const;
+    expect(summarizePlan(days)).toEqual({ lowestProjectedBefore: "-1999999999998.000000", firstShortageDate: "2026-10-02", excess: "1999999999999.000000" });
+  });
 });
