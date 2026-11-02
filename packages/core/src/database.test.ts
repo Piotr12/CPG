@@ -62,6 +62,7 @@ describe("migrateDatabase", () => {
       "Migration20261101075645_mrp_recommendation_lead_time",
       "Migration20261101080923_mrp_run_exceptions",
       "Migration20261101112824_mrp_recommendation_bom",
+      "Migration20261102105033_mrp_automatic_mode",
     ]);
     expect(await migrateDatabase(config)).toEqual([]);
   });
