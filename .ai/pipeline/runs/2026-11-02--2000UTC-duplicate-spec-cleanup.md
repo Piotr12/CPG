@@ -26,6 +26,6 @@ Branch protection, required checks or a merge queue. Where specs live. Deploying
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Guard, workflows, docs
-- [ ] 1.1 The guard's decision and its command
-- [ ] 1.2 The workflows
-- [ ] 1.3 Docs, lesson and the spec into implemented/
+- [x] 1.1 The guard's decision and its command — 256aea83
+- [x] 1.2 The workflows — d75ee21d
+- [x] 1.3 Docs, lesson and the spec into implemented/ — cf4c11a4
