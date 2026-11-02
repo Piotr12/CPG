@@ -59,7 +59,7 @@ export interface MrpPlan {
   transfersOut: readonly MrpTransferMovement[];
   /** The transfers behind the buckets' transfer receipt, at this destination (#277). */
   transfersIn: readonly MrpTransferMovement[];
-  /** What the plan leaves uncovered, by date, then priority (E16-S02, `priority/rank-shortages.ts`); not stored. */
+  /** What the plan leaves uncovered, by date, then priority (E16-S02, `priority/rank-shortages.ts`); not stored, ranked on first read (#327). */
   shortages: readonly MrpShortage[];
 }
 

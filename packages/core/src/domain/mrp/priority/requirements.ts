@@ -80,8 +80,7 @@ export function rootOf(requirement: Requirement): MrpDemandRoot {
 /**
  * Every requirement of `pair` by the date it counts in, each day's in priority order. A planned component adds
  * one requirement per share. Shares with an equal key are summed into one: since E17-S03 a parent pair can hold
- * two provisional proposals on one need date, of equal priority. The trace and the ranking of one pair share
- * the result (`pegProposals`, `rankShortages`), each serving from `required` again.
+ * two provisional proposals on one need date, of equal priority.
  */
 export function requirementsByDate(pair: RequirementLists): Map<string, Requirement[]> {
   const byDate = new Map<string, Requirement[]>();
@@ -112,7 +111,7 @@ export function requirementsByDate(pair: RequirementLists): Map<string, Requirem
   return byDate;
 }
 
-/** Restores every requirement of `due` to unserved, so another pass can serve it. */
+/** Restores every requirement of `due` to unserved, so another pass of the trace can serve it. */
 export function unserved(due: ReadonlyMap<string, readonly Requirement[]>): void {
   for (const list of due.values()) for (const requirement of list) requirement.outstanding = requirement.required;
 }

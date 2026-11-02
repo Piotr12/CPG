@@ -2135,6 +2135,21 @@ describe("planMrp: root ranking (#327, PRD §04 \"Overdue demand and priority\")
     expect(planAt(result.plans, "R").plannedComponentDemand.map(({ roots }) => roots)).toEqual([[{ root: orderRoot(due), quantity: q("2") }]]);
   });
 
+  it("ranks a plan's shortages on first read and keeps them, so every read gives the same list", () => {
+    const due = line({ material: "F", quantity: q("6"), requiredDate: day(10) });
+    const result = planMrp(
+      inputs({ orderLines: [due], stock: [stock("R", "L1", "2")], planningParameters: [params("F", "make", 2), params("R", "buy", 30)], boms: [recipe("F", { R: "1" })] }),
+      TODAY,
+    );
+    const r = planAt(result.plans, "R");
+    expect(Object.getOwnPropertyDescriptor(r, "shortages")).toMatchObject({ enumerable: true, get: expect.any(Function) });
+    const first = r.shortages;
+    expect(first).toEqual([expect.objectContaining({ kind: "planned-component", uncovered: q("4"), root: orderRoot(due) })]);
+    expect(r.shortages).toBe(first);
+    // A spread reads it like any field, as the comparisons in these tests do.
+    expect({ ...r }.shortages).toBe(first);
+  });
+
   it("roots a lot's surplus at the parent's target, ranked after the component's own forecast", () => {
     // F's order of 3 is lot-sized to 5: 2 of F's need for R serve no requirement of F.
     const due = line({ material: "F", quantity: q("3"), requiredDate: day(6) });

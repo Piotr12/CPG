@@ -36,15 +36,9 @@ export interface PeggedShares {
  * day on, unattributed. Then each executable proposal's surplus, from its need date: those units are re-rooted
  * from the pair's target to the provisional need they serve, so only pass 1's target-rooted shares ever change.
  * Last come the provisional `provisional` proposals, sized only for what those needs add.
- *
- * `due` is the pair's `requirementsByDate`, which `planMrp` builds once for the trace and the ranking.
  */
-export function pegProposals(
-  pair: PeggedPair,
-  proposals: readonly PeggedProposal[],
-  provisional: readonly PeggedProposal[],
-  due: Map<string, Requirement[]> = requirementsByDate(pair),
-): PeggedShares {
+export function pegProposals(pair: PeggedPair, proposals: readonly PeggedProposal[], provisional: readonly PeggedProposal[]): PeggedShares {
+  const due = requirementsByDate(pair);
   const executable = proposals.map(entryOf);
   const sized = provisional.map(entryOf);
   const existingLeft = trace(pair, due, executable, false, null);

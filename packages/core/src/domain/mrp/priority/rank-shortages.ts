@@ -1,5 +1,5 @@
 import type { MrpBucket, MrpShortage } from "../mrp-result";
-import { RequirementQueues, requirementsByDate, rootOf, unserved, type Requirement, type RequirementLists } from "./requirements";
+import { RequirementQueues, requirementsByDate, rootOf, type Requirement, type RequirementLists } from "./requirements";
 
 /** One projected pair: what the priority pass reads. */
 export interface RankedPair extends RequirementLists {
@@ -23,12 +23,9 @@ export interface RankedPair extends RequirementLists {
  *
  * Priority never changes a quantity. Each day, what is outstanding equals how far `projectedAfter` is
  * below zero, and what is left equals how far it is above.
- *
- * `due` is the pair's `requirementsByDate` when the trace already built it (`planMrp`); it is served afresh.
  */
-export function rankShortages(pair: RankedPair, due?: Map<string, Requirement[]>): MrpShortage[] {
-  if (due) unserved(due);
-  else due = requirementsByDate(pair);
+export function rankShortages(pair: RankedPair): MrpShortage[] {
+  const due = requirementsByDate(pair);
   const queues = new RequirementQueues();
   let available = pair.physical;
   const shortages: MrpShortage[] = [];

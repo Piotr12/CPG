@@ -15,6 +15,7 @@ import type {
   MrpProvisionalAction,
   MrpProvisionalBlocker,
   MrpResult,
+  MrpShortage,
   MrpSupply,
   MrpTransferMovement,
 } from "./mrp-result";
@@ -23,7 +24,6 @@ import { compareCodes, comparePairs, pairKey } from "./projection/pairs";
 import { emptyFlows, lowestDependableBalances, projectBuckets, type MrpLedger } from "./projection/project-buckets";
 import { pegProposals } from "./priority/peg-proposals";
 import { rankShortages } from "./priority/rank-shortages";
-import { requirementsByDate, type Requirement } from "./priority/requirements";
 import { productionMovements } from "./supply/production-orders";
 import { purchasingSupply } from "./supply/purchasing-supply";
 import { compareExceptions } from "./exceptions/compare-exceptions";
@@ -69,8 +69,8 @@ interface PairDraft extends MrpLedger {
  * `replenishPair` also times each proposal (E16-S02): its receipt counts on its planned finish, which is later than
  * its need when the lead time makes it late, and a Beyond Horizon proposal counts in no bucket, so the
  * days before its stock arrives keep their shortage. Last, every pair's uncovered requirements are
- * ranked on its balance after proposals (`rankShortages`), and every overdue supply item of a readable
- * material becomes a warning (E18-S02), which stops nothing.
+ * ranked on its balance after proposals (`rankShortages`), on the first read of its `shortages`, and every
+ * overdue supply item of a readable material becomes a warning (E18-S02), which stops nothing.
  *
  * Pairs are sized level by level (E17-S01, PRD §04 "Multilevel explosion"): by their material's low-level
  * code (`bomLevels`), then material and location. Each production-order proposal is exploded through its
@@ -231,14 +231,10 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
     // Every pair of the level is complete: only a lower level explodes into it. Traced before any claim, on the
     // sized quantities and need dates, so feasibility changes no share (#327).
     const sharesOf = new Map<TimedProposal, readonly MrpDemandShare[]>();
-    /** A traced pair's requirements, which its ranking serves again. */
-    const dueOf = new Map<PairDraft, Map<string, Requirement[]>>();
     for (const { draft, buckets, replenished } of sized) {
       const makes = replenished.proposals.filter(({ kind }) => kind === "production-order");
       if (makes.length === 0 && replenished.provisional.length === 0) continue;
-      const due = requirementsByDate(draft);
-      dueOf.set(draft, due);
-      const pegged = pegProposals({ ...draft, buckets }, makes, replenished.provisional, due);
+      const pegged = pegProposals({ ...draft, buckets }, makes, replenished.provisional);
       makes.forEach((proposal, index) => sharesOf.set(proposal, pegged.proposals[index]));
       replenished.provisional.forEach((proposal, index) => sharesOf.set(proposal, pegged.provisional[index]));
     }
@@ -311,7 +307,7 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
       const { flows, ...plan } = draft;
       if (replenished.exception) exceptions.push(replenished.exception);
       const buckets = projectBuckets(plan.physical, flows);
-      plans.push({ ...plan, buckets, shortages: rankShortages({ ...plan, buckets }, dueOf.get(draft)) });
+      plans.push(withShortages({ ...plan, buckets }));
     }
   }
   plans.sort(comparePairs);
@@ -323,4 +319,13 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
   // Like Insufficient Transfer Stock, no warning for a material whose balances an unreadable row left incomplete (#316).
   const warnings = plans.filter(({ material }) => !unreadable.has(material)).flatMap(overdueWarnings).sort(compareWarnings);
   return { today, dates, plans, proposals, provisional, exceptions: exceptions.sort(compareExceptions), warnings };
+}
+
+/**
+ * `plan` with its `shortages` ranked on first read, then kept (#327): no stored run, API or screen reads them yet
+ * (#279 Q4), and ranking every pair's root shares is a large part of a run. The value never depends on when it is read.
+ */
+function withShortages(plan: Omit<MrpPlan, "shortages">): MrpPlan {
+  let shortages: MrpShortage[] | undefined;
+  return Object.defineProperty({ ...plan } as MrpPlan, "shortages", { enumerable: true, get: () => (shortages ??= rankShortages(plan)) });
 }
