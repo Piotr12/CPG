@@ -20,7 +20,7 @@ Option 3 orders twice. With the requisition on the planned finish, the next run 
 
 Option 2 lets supply count against needs before its own date. That covers up real shortages for every late document, purchase orders included, not only accepted ones. It also reopens #279's sizing, which all of E16–E19 builds on.
 
-Option 1 is what both halves ship, and it is how mainstream MRP treats a firmed document: the document keeps the requirement date, and an exception says its date can't be met. The gap is that missing exception. Before the accept, the planner sees "Late Supply · 1 day · finish 3 Oct" on the need date. After it, the next run shows the requisition as ordinary tentative supply on that day. The warning appears only once the date has passed, as Overdue Supply. So the planner loses the one fact that would make them expedite the purchase. The same happens to a requisition typed by hand, or created by an automatic run (#289), with a date too close.
+Option 1 is what both halves ship, and it is how mainstream MRP treats a firmed document: the document keeps the requirement date, and an exception says its date can't be met. The gap is that missing exception. Before the accept, the planner sees "Late Supply · 1 day · finish Oct 3" on the need date. After it, the next run shows the requisition as ordinary tentative supply on that day. The warning appears only once the date has passed, as Overdue Supply. So the planner loses the one fact that would make them expedite the purchase. The same happens to a requisition typed by hand, or created by an automatic run (#289), with a date too close.
 
 ## Resolved assumptions (autonomous defaults)
 
@@ -154,7 +154,8 @@ One phase, one PR: the decision is a no-op, and the warning is a small vertical 
 2. **Read.** `planMarks` maps `LATE_REQUISITION` to `late-requisition` and skips malformed details (missing document or `plannedFinish`, or a `lateDays` that isn't a whole number above 0). `MRP_MARK_KINDS` order, with a one-day test of `overdue-supply`, `late-requisition` and `late-supply` together. `weekly.test.ts` folds it into its week. A `mrp-run.service.test.ts` case: run, then `latest` returns the mark.
 3. **Screen and copy.** `MrpMarks` icon (its `ICONS` record is keyed by every kind, so the compiler requires it) and `markText`; EN/PL messages; the help topic's three paragraphs (warnings, accept, API). Component and help tests, the glossary guards included.
 4. **Contract docs.** `BACKWARD_COMPATIBILITY.md` §4: the mark kind and the stored code, with the rollback note. Add evidence to `research/CPG-acceptance.md` MRP-037 if it lists Late Supply's evidence.
-5. **Integration.** `tests/integration/mrp-accept.test.ts`: after accepting the late proposal, run MRP again and see the "Late · Requisition …" mark on its need date in the browser. Assert the same mark through `GET …/mrp/runs/latest`.
+5. **Integration.** `tests/integration/mrp-accept.test.ts`: after accepting the late proposal, run MRP again and see the "Late · Requisition …" mark on its need date in the browser. Assert the same mark through `GET …/mrp/runs/latest`. A new mark kind is a seam (lesson 2026-11-01): grep `tests/integration` for exact `marks` assertions and mark counts (`mrp-report-api.test.ts`, `mrp-report.test.ts`, `mrp-accept.test.ts`), and check that no Open requisition they read now falls inside its lead time. Run those files too.
+6. **Text reuse.** The mark names its requisition through the existing `marks.documents.requisition` text ("Requisition {id}", "Zapotrzebowanie zakupu {id}"), as Overdue does, so the two marks name it the same way.
 
 ## Acceptance criteria
 
