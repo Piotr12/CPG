@@ -3,7 +3,7 @@
 **Date:** 2026-11-02 16:04 UTC
 **Agent:** Claude Code (claude-opus-5-5), `om-auto-fix-pr 348`, dispatched by cezar
 **Spec:** none (PR #348 closes #310; earlier logs: `2026-11-02--1302UTC-fix-issue-310-supply-rows-mrp-report.md`, `2026-11-02--1413UTC-fix-pr-348-merge-ready.md`)
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -22,9 +22,13 @@
 
 - 16:20 Re-review (`om-auto-review-pr --autofix`, re-entering this run's lock): nothing blocking. The delta against `main` is the PR's own content; the merge changed it only in the two resolutions. Two minor items, both fixed: the paperwork lesson gains the #344/#345 case (merged 14 s apart); the guard the first pass's run log named as a follow-up was never filed, so it is now #351.
 
+- 16:25 Correction during the re-review: #344 itself deleted #341's and #343's duplicate specs on `main`, so the lesson's "until #348 deleted both copies" was wrong; it now credits #344, and the PR description says this branch deletes only #344's copy. UI QA is n/a (tests, catalogue and `.ai/` only; `skip-qa`). Summary posted; `in-progress` swapped for `ci-monitoring` while CI runs on this commit.
+
 ## Changes
 
 - Merge commit `36cafae0` of `origin/main` into the PR branch, with the two conflict resolutions and the deletion of #344's active spec copy.
+- `61c36579`, `0f688852`: the paperwork lesson credits #344 for the earlier deletions and adds #344/#345's case; this run log.
+- PR description's Scope and Validation updated; follow-up #351 filed.
 
 ## Verification
 
@@ -35,4 +39,6 @@
 
 ## Follow-ups
 
+- CI on this run log's commit was pending when the run reported; the result goes in a PR comment, not here.
+- The PR waits for a human approval and merge. Merging it also fixes `main`'s failing `tests/ai-filenames.test.ts`.
 - #351: a guard that stops a spec PR's squash merge from leaving a duplicate active spec copy on `main` (four incidents on 2026-11-02).
