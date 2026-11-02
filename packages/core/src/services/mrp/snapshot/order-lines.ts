@@ -1,4 +1,4 @@
-import { CustomerOrderLine, type EntityManager, type FilterQuery } from "@cpg/db";
+import { CustomerOrderLine, notCalendarDate, type EntityManager, type FilterQuery } from "@cpg/db";
 import { addMonths } from "../../../domain/demand/demand-buckets";
 import type { MrpOrderLine } from "../../../domain/mrp/mrp-inputs";
 import { yieldToEventLoop } from "../../../http/yield-to-event-loop";
@@ -68,13 +68,23 @@ export async function readOrderLines(em: EntityManager, codes: SnapshotCodes, be
  * `before`: they add no firm demand, but each consumes its month's forecast with `quantity − abandoned`
  * (D08, DEM-009/010/011). One read per calendar month through `(tenant, required_date)`, a bounded range
  * of the window only, never the history, followed by a yield, so no read stalls the server for long.
+ *
+ * A date that isn't a real day can sort outside every month, so a last read finds those lines with
+ * `notCalendarDate` and reports them, as `beforeCutOff` does for the Open lines (#321). It walks the
+ * tenant's lines outside the window through `(tenant, required_date)` in SQLite, hydrating only the
+ * corrupt ones; those inside the window were reported by their month's read.
  */
 export async function readConsumingLines(em: EntityManager, codes: SnapshotCodes, from: string, before: string, unreadable: UnreadableRows): Promise<MrpOrderLine[]> {
+  const consuming = { removed: false, status: { $ne: "open" } } as const;
   const lines: MrpOrderLine[] = [];
   for (let month = from; month < before; month = addMonths(month, 1)) {
-    const read = await findLines(em, { removed: false, status: { $ne: "open" }, requiredDate: { $gte: month, $lt: addMonths(month, 1) } });
+    const read = await findLines(em, { ...consuming, requiredDate: { $gte: month, $lt: addMonths(month, 1) } });
     for (const line of read) addLine(lines, line, codes, unreadable);
     await yieldToEventLoop();
   }
+  const corrupt = await findLines(em, { ...consuming, ...notCalendarDate("required_date"), $or: [{ requiredDate: { $lt: from } }, { requiredDate: { $gte: before } }] });
+  // `readRow` refuses each one's date, so `addLine` reports it.
+  for (const line of corrupt) addLine(lines, line, codes, unreadable);
+  await yieldToEventLoop();
   return lines;
 }

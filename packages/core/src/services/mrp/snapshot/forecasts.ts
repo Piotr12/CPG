@@ -1,4 +1,4 @@
-import { Forecast, type EntityManager } from "@cpg/db";
+import { Forecast, notCalendarDate, type EntityManager } from "@cpg/db";
 import { addDays, addMonths } from "../../../domain/demand/demand-buckets";
 import type { MrpForecast } from "../../../domain/mrp/mrp-inputs";
 import { yieldToEventLoop } from "../../../http/yield-to-event-loop";
@@ -11,6 +11,11 @@ import { readRow, type UnreadableRows } from "./readable";
  * Earlier months' forecasts have expired (D08), and one after `last` counts in no bucket. Leaving it out
  * changes no earlier residual, since a month's orders consume its forecasts in date order. One that
  * can't be read is left out and reported (E16-S03).
+ *
+ * A date that isn't a real day can sort outside every month, `30/10/2026` among them, so a last read
+ * finds those with `notCalendarDate` and reports them too, as `beforeCutOff` does in the in-code
+ * cut-offs (#321). It walks the tenant's forecasts in SQLite (25 ms at 310,000 rows), hydrating only
+ * the corrupt ones; those inside the window were reported by their month's read.
  */
 export async function readForecasts(em: EntityManager, codes: SnapshotCodes, from: string, last: string, unreadable: UnreadableRows): Promise<MrpForecast[]> {
   const end = addDays(last, 1);
@@ -30,5 +35,12 @@ export async function readForecasts(em: EntityManager, codes: SnapshotCodes, fro
     }
     await yieldToEventLoop();
   }
+  const corrupt = await em.find(
+    Forecast,
+    { ...notCalendarDate("date"), $or: [{ date: { $lt: from } }, { date: { $gte: end } }] },
+    { fields: ["material", "location"], disableIdentityMap: true },
+  );
+  for (const row of corrupt) unreadable.push({ material: codes.materials.get(row.material.id)!, location: codes.locations.get(row.location.id)!, record: "forecast" });
+  await yieldToEventLoop();
   return forecasts;
 }

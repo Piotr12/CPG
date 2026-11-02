@@ -1,4 +1,5 @@
 import { raw } from "@mikro-orm/core";
+import { plainColumn } from "./sql-column";
 
 /**
  * An `orderBy` key for the length of the integer part of the decimal text in `column`, a column of
@@ -7,12 +8,12 @@ import { raw } from "@mikro-orm/core";
  * digits is a larger number, and equal lengths compare digit by digit. `CAST(… AS REAL)` would lose
  * the last digits of R03's eighteen.
  *
- * The only raw SQL `@cpg/db` exports for queries: an `ORDER BY` term, never a filter, so the tenant
- * filter applies unchanged. Build a fresh key for every query. `column` is a plain column name the code
- * chooses, never user input; anything else (a dotted path, a camelCase property) is refused.
+ * One of the two raw SQL terms `@cpg/db` exports for queries, with `notCalendarDate`: an `ORDER BY` term,
+ * so the tenant filter applies unchanged. Build a fresh key for every query. `column` is a plain column
+ * name the code chooses, never user input (`plainColumn`).
  */
 export function decimalLengthKey(column: string): symbol {
-  if (!/^[a-z][a-z_]*$/.test(column)) throw new Error(`Not a column name: ${column}`);
+  const name = plainColumn(column);
   // A fragment becomes a symbol when used as a computed key; MikroORM types it the same way.
-  return raw<symbol>((alias: string) => `instr(${alias}.${column} || '.', '.')`);
+  return raw<symbol>((alias: string) => `instr(${alias}.${name} || '.', '.')`);
 }

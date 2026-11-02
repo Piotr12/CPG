@@ -346,8 +346,8 @@ Implemented on #316 (spec PR #314). Where the build departs from the text above:
   - A material with an unreadable row reports only Invalid UoM Conversion, never Insufficient Transfer Stock. That exception's `available` would come from the incomplete balance, the guess Q4's reason rules out. Q4's "independent" now holds only for materials whose rows all read.
   - A row whose cut-off date isn't a real day is no longer dropped by the string comparison (`beforeCutOff`). It reaches `readRow` and is reported.
   - A current BOM revision whose validity dates aren't real days is left out, so it covers no date.
-- **Known limits**, filed as #321:
-  - Forecasts and safety targets are cut off by a SQL date range, so a corrupt date that sorts outside the range is not read, and is not reported either.
-  - The BOM revision read walks the tenant's revisions once per chunk of 100 BOMs.
+- **Known limits**, filed as #321 and resolved there:
+  - Forecasts and safety targets are cut off by a SQL date range, so a corrupt date that sorts outside the range is not read, and is not reported either. The non-Open lines' month reads had the same limit. Now safety targets are cut off in code with `beforeCutOff`. Forecasts and non-Open lines add one read of the dates that aren't real days and sort outside the window (`notCalendarDate` in `@cpg/db`).
+  - The BOM revision read walks the tenant's revisions once per chunk of 100 BOMs. Now each read takes two `(bom, number)` terms, which SQLite seeks through the unique index. The production dialog's read is unchanged: it reads one output's BOMs.
 - **Migration** `Migration20261101080923_mrp_run_exceptions` only creates the table, with no `CHECK` and `on delete cascade` on `run_id`. While updating the counts, the rollback test's table list gained `mrp_recommendation` and `mrp_run_exception`. Without them, its "dropped on the way down" checks could not fail.
 
