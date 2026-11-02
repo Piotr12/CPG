@@ -51,7 +51,7 @@ PR: #356
 ### Phase 3: Verification and docs
 
 - [x] 3.1 Benchmark — e409d530
-- [x] 3.2 Docs and catalogue — docs commit
+- [x] 3.2 Docs and catalogue — 4f41b87c
 
 ## Log
 
