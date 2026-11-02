@@ -1,6 +1,6 @@
 # MRP report explanations: each Make proposal shows its chosen BOM and every rejected one with its exact shortages, and the report lists at-risk orders, planning exceptions and provisional plans apart from executable proposals
 
-**Status:** in progress
+**Status:** implemented. See the implementation notes for what changed against the plan (#335).
 **Created:** 2026-11-02 06:52 UTC
 **Issue:** #286 (E18-S03, epic #270) · **Depends on:** the last MRP report (`implemented/2026-10-31--0907UTC-mrp-report.md`, #284), planning exceptions (`implemented/2026-11-01--0737UTC-mrp-planning-exceptions.md`, #280), BOM choice (`implemented/2026-11-01--1918UTC-mrp-bom-choice.md`, #282), at-risk production and provisional plans (`implemented/2026-11-01--2049UTC-mrp-at-risk-and-provisional-plans.md`, #283), weeks and marks (`implemented/2026-11-01--1105UTC-mrp-report-weeks.md`, #285), all merged · **Design authority:** `.ai/specs/product-brief.md` (R03, R04, R05, R07, R10, D03, N01, N04), `research/CPG-prd001.pdf` §04 "BOM choice and explanation", "Multilevel explosion", §07 "Last MRP report", `research/CPG-prd-datamodel.pdf` "MRP recommendation / exception", `research/CPG-acceptance.md` UX-020, MRP-025, MRP-047, MRP-050, MRP-051, LFC-026, LFC-027
 
@@ -280,3 +280,16 @@ A fresh-context review found nothing Critical. Its findings are folded in:
   - The deploy-overlap note.
   - Units on the transfer text.
   - The rejection list is shown under both the provisional row and its exception.
+
+## Implementation notes
+
+Implemented on #335. What differs from the plan above, or settles what it left open:
+
+- **Missing Usable BOM keeps its order without an `order` key.** Its `inactive` list is already in engine order, so `exceptionRejections` (`domain/mrp/report/bom-rejections.ts`) reads it in that order instead of falling back to BOM ID order. Only `rejectionDetails` gained `order`.
+- **A provisional action stores its rejections** when it has the `no-feasible-bom` blocker (as before, so an empty list still writes `missing: ""`), or whenever its `rejectedBoms` isn't empty (Q3a).
+- **The accept answer's `proposal` carries `rejectedBoms: []`**, since it extends the proposal view. This is listed in BACKWARD_COMPATIBILITY.md.
+- **One integration test did pin the day table's columns.** The Risks section said none did, but `tests/integration/mrp-report.test.ts` counts the day table's header cells, now 14.
+- **Moving the explanation setup was a seam.** It moved ahead of the UI file's own records, because that file relies on its cabinet being its newest material, whose pair sorts last (lesson 2026-11-01, seams). With every MRP file on one server, the pair fell off the last page until the setup moved.
+- **The Polish copy follows the help topic's glossary**: "plan tymczasowy" and "BOM-u", not a new term.
+- **Spacing uses whole design-token steps** (`gap-1`, `mt-1`), as `tests/design-tokens.test.ts` requires.
+- **The worst-case benchmark stall is unchanged.** On this machine the ten-times worst case stalled 247, 263 and 275 ms. With `main`'s `core` and `db` source on the same machine it stalled 257 and 274 ms, with the same row counts. No `BOM_REJECTIONS` row is written there, and the test passes.
