@@ -52,6 +52,53 @@ const checkInPage = (expression: string, slice: number) => `new Promise((resolve
   check();
 })`;
 
+/** How much of the page's text a timed-out wait quotes. */
+const PAGE_TEXT_CHARS = 400;
+
+/** What a page showed when a wait gave up: the result of `PAGE_STATE`. */
+export interface PageState {
+  url: string;
+  readyState: DocumentReadyState;
+  title: string;
+  /** Suspense boundaries still showing their fallback: React keeps a `<template id="B:…">` in each. */
+  pending: number;
+  /** Streamed parts React has not revealed yet: each waits in a `<div hidden id="S:…">`. */
+  staged: number;
+  /** The start of the shown `main`'s visible text (the body's when no `main` is shown), whitespace collapsed. */
+  text: string;
+}
+
+/** A script that reads the page's `PageState`. */
+export const PAGE_STATE = `(() => {
+  const shown = [...document.querySelectorAll("main")].find((main) => !main.closest("[hidden]")) ?? document.body;
+  return {
+    url: location.href,
+    readyState: document.readyState,
+    title: document.title,
+    pending: document.querySelectorAll('template[id^="B:"]').length,
+    staged: document.querySelectorAll('div[hidden][id^="S:"]').length,
+    text: (shown?.innerText ?? "").replace(/\\s+/g, " ").trim().slice(0, ${PAGE_TEXT_CHARS}),
+  };
+})()`;
+
+/**
+ * The error of a wait for `expression` that gave up, saying what the page showed then: whether it was
+ * still loading or streaming, showed an error, or had gone somewhere else (a sign-in redirect). A
+ * timeout that named only its condition left a one-off failure nothing to go on (#373).
+ */
+export async function waitTimedOut(page: Pick<Browser, "evaluate">, expression: string, cause: unknown) {
+  let shows: string;
+  try {
+    const { url, readyState, title, pending, staged, text } = await page.evaluate<PageState>(PAGE_STATE);
+    shows = `The page ${url} (${readyState}, title ${JSON.stringify(title)}, ${pending} Suspense boundaries still loading, ${staged} streamed parts not shown yet) reads: ${JSON.stringify(text)}`;
+  } catch (error) {
+    // agent-browser's answer is on its output; the command line it failed with repeats the whole script.
+    const answer = (error as { stderr?: string; stdout?: string }).stderr?.trim() || (error as { stdout?: string }).stdout?.trim();
+    shows = `The page could not be read: ${answer || String(error)}`;
+  }
+  return new Error(`Wait timed out after ${WAIT_TIMEOUT_MS}ms for ${expression}\n${shows}`, { cause });
+}
+
 /** A page function: whether an element is visible as agent-browser's `wait <selector>` counts it. */
 const visible = `((element) => {
   if (!element) return false;
@@ -100,7 +147,8 @@ export function openBrowser() {
    * to a boolean: agent-browser serializes it over CDP, and a DOM element (with its React fiber) can
    * fail with "Object reference chain is too long". The page polls it every 10 ms, where agent-browser's
    * `wait` polls every 100 ms and so added ~50 ms to every wait. A navigation ends the page's check
-   * with an error; the wait then checks the new page, as `wait --fn` does.
+   * with an error; the wait then checks the new page, as `wait --fn` does. A wait that gives up says
+   * what the page showed (`waitTimedOut`).
    */
   const waitUntil = async (expression: string) => {
     const deadline = Date.now() + WAIT_TIMEOUT_MS;
@@ -118,7 +166,7 @@ export function openBrowser() {
         await sleep(POLL_MS);
       }
     }
-    throw new Error(`Wait timed out after ${WAIT_TIMEOUT_MS}ms for ${expression}`, { cause: lastError });
+    throw await waitTimedOut({ evaluate }, expression, lastError);
   };
 
   return {
