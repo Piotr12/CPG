@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { callApi, json, type UserRow } from "./api";
-import { clickHydrated, openBrowser, type Browser } from "./browser";
+import { clickHydrated, expectTitle, openBrowser, type Browser } from "./browser";
 import { signedInAs, signIn, signInAsAdmin } from "./sign-in";
 import { createToken, openTokens } from "./tokens";
 
@@ -128,7 +128,7 @@ describe("the admin manages normal users", () => {
     await admin.waitFor("table");
 
     expect(await pathname(admin)).toBe("/admin/users");
-    expect(await admin.title()).toBe("Users · Caveman Planning Good");
+    await expectTitle(admin, "Users · Caveman Planning Good");
     expect(await admin.text("main p")).toBe(
       "Users are never deleted. Deactivate an account to end its access; its history keeps its name.",
     );

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import { clickHydrated, openBrowser, type Browser } from "./browser";
+import { clickHydrated, expectTitle, openBrowser, type Browser } from "./browser";
 import { signIn, signInAsAdmin } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
@@ -83,7 +83,7 @@ describe("locations, customers and suppliers (E03-S02)", () => {
       await admin.click(`main a[href='/admin/test/${kind}']`);
       await admin.waitForText(`${title} — Test`);
 
-      expect(await admin.title()).toBe(`Test · ${title}`);
+      await expectTitle(admin, `Test · ${title}`);
       const rows = await listRows(admin, "test", kind);
       expect(rows[0]).toEqual(["00000001", first, "Active"]);
       const count = Number(last.slice(0, 8));

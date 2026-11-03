@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import { chooseFromList, clickHydrated, openBrowser, type Browser } from "./browser";
+import { chooseFromList, clickHydrated, expectTitle, openBrowser, type Browser } from "./browser";
 import { signIn, signInAsAdmin } from "./sign-in";
 import { createUser } from "./users";
 
@@ -104,7 +104,7 @@ describe("BOMs (E04-S01)", () => {
     await admin.waitUntil(ready(`document.querySelector("main a[href='/admin/test/boms']")`));
     await admin.click("main a[href='/admin/test/boms']");
     await admin.waitForText("BOMs — Test");
-    expect(await admin.title()).toBe("Test · BOMs");
+    await expectTitle(admin, "Test · BOMs");
 
     const list = (await rows(admin, "/admin/test/boms")).map((row) => row.slice(0, 4));
     expect(list).toHaveLength(18);

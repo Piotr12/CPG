@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import { clickHydrated, openBrowser, type Browser } from "./browser";
+import { clickHydrated, expectTitle, openBrowser, type Browser } from "./browser";
 import { hydrated, signInAsAdmin } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
@@ -55,7 +55,7 @@ describe("tenants in the admin", () => {
 
     expect(await pathname(browser)).toBe("/admin/test");
     expect(await headerName(browser)).toBe("TEST Active tenant");
-    expect(await browser.title()).toBe("Test · Admin · Caveman Planning Good");
+    await expectTitle(browser, "Test · Admin · Caveman Planning Good");
     const generation = await browser.evaluate<number>(`fetch("/api/tenants/test").then(r=>r.json()).then(result=>result.data.generation)`);
     expect(await browser.text("[data-slot=card-description]")).toBe(`Dataset generation ${generation}`);
     expect(await browser.text("main")).toContain("Materials");
@@ -67,7 +67,7 @@ describe("tenants in the admin", () => {
 
     expect(await pathname(browser)).toBe("/admin/prod");
     expect(await headerName(browser)).toBe("PROD Active tenant");
-    expect(await browser.title()).toBe("Prod · Admin · Caveman Planning Good");
+    await expectTitle(browser, "Prod · Admin · Caveman Planning Good");
     expect(await browser.evaluate<string>(`document.querySelector("${SWITCH} a[aria-current=page]").textContent`)).toBe("Prod");
 
     await clickHydrated(browser, `${SWITCH} a[href='/admin/test']`);

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import { openBrowser, type Browser } from "./browser";
+import { expectTitle, openBrowser, type Browser } from "./browser";
 import { signInAsAdmin } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
@@ -23,7 +23,7 @@ describe("a fresh app instance", () => {
   it("serves the home page with the flow of what is built, each step linked to its help topic", async () => {
     await browser.open(baseUrl);
 
-    expect(await browser.title()).toBe("Caveman Planning Good");
+    await expectTitle(browser, "Caveman Planning Good");
     expect(await browser.text("h1")).toBe("Caveman Planning Good");
     expect(await browser.texts("ol[aria-label='What CPG covers'] a")).toEqual([
       "Forecasts and customer orders",
@@ -36,7 +36,7 @@ describe("a fresh app instance", () => {
   it("shows a migrated database on the admin page, holding only the admin-password stamp, and both tenants writable", async () => {
     await signInAsAdmin(browser, baseUrl, adminPassword);
 
-    expect(await browser.title()).toBe("Admin · Caveman Planning Good");
+    await expectTitle(browser, "Admin · Caveman Planning Good");
     expect(await browser.text("h1")).toBe("Tenants");
     // Design system v1: a tenant's access is a status (icon + label), the counts stay category tags.
     expect(await browser.texts("[data-slot=status-badge]")).toEqual(["Writable", "Writable"]);

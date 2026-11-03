@@ -5,6 +5,7 @@ import { arch, platform } from "node:os";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { promisify } from "node:util";
+import { expect } from "vitest";
 
 const run = promisify(execFile);
 const binaries = path.resolve(import.meta.dirname, "../../node_modules/agent-browser/bin");
@@ -123,7 +124,6 @@ export function openBrowser() {
   return {
     evaluate,
     open: (url: string) => command("open", url),
-    title: () => command("get", "title"),
     /** The visible text of the first element matching a CSS selector. */
     text: (selector: string) => command("get", "text", selector),
     /** The visible text of every element matching a CSS selector. */
@@ -206,6 +206,17 @@ export async function clickHydrated(browser: Browser, selector: string) {
     return true;
   })()`);
   await browser.click("[data-test-click]");
+}
+
+/**
+ * Asserts the page's title, waiting up to 25 s (`timeout` ms) for it to become `expected`. Next.js
+ * streams a dynamic page's metadata separately from its body, and a client navigation swaps the
+ * title separately too, so when the body shows what a test waited for, the title can still be empty
+ * or the previous page's (#358). A failure reports the last title read. There is no one-shot title
+ * read on `Browser`, so a test can't race the title again.
+ */
+export async function expectTitle(browser: Pick<Browser, "evaluate">, expected: string, timeout = WAIT_TIMEOUT_MS) {
+  await expect.poll(() => browser.evaluate<string>("document.title"), { timeout, interval: POLL_MS }).toBe(expected);
 }
 
 /**
