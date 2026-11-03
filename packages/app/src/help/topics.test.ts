@@ -106,10 +106,12 @@ describe("help topics", () => {
   });
 
   it.each([
-    ["en", "the run doesn't propose that production", "It makes a provisional plan instead", "The components' own production for that plan is provisional too",
+    ["en", "the run doesn't propose that production", "It makes a provisional plan instead", "Otherwise the components' own production for that plan is provisional too",
+      "When the run can supply every component the plan is short of", "a component's production is proposed for them once its own components can be supplied",
       "Purchase requisitions for what it needs are still proposed", "never counted in a balance, so the shortage stays visible", "is at risk", "an at-risk production exception",
       "until the order is closed or cancelled or the component is reactivated"],
-    ["pl", "przebieg nie proponuje tej produkcji", "Tworzy zamiast niej plan tymczasowy", "Produkcja składników na potrzeby tego planu też jest tymczasowa",
+    ["pl", "przebieg nie proponuje tej produkcji", "Tworzy zamiast niej plan tymczasowy", "W przeciwnym razie produkcja składników na potrzeby tego planu też jest tymczasowa",
+      "Gdy przebieg może zaopatrzyć każdy składnik, którego planowi brakuje", "produkcja składnika jest dla nich proponowana",
       "Zapotrzebowania zakupowe na to, czego plan potrzebuje, są nadal proponowane", "nigdy nie liczy się w stanie, więc brak pozostaje widoczny", "jest zagrożone", "wyjątek zagrożonej produkcji",
       "składnik zdezaktywowany po utworzeniu zlecenia", "dopóki zlecenie nie zostanie zamknięte lub anulowane albo składnik ponownie aktywowany"],
   ] as const)("says in %s that production no BOM can supply is a provisional plan, never supply, and that an order pinning a deactivated component is at risk (#283)", (locale, ...phrases) => {

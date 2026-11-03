@@ -171,18 +171,22 @@ describe("automatic journeys: a falling forecast and a provisional hierarchy", (
     ].sort());
     expect(screen.accept).toBe(0);
 
-    // Run 2, after R's receipt: R needs nothing more, and F, whose input I is not on hand, is still provisional with
-    // no production order. (I stays provisional too, which is #369: below.)
+    // Run 2, after R's receipt: R needs nothing more, and I's production order, executable from the R on hand, is
+    // created, since making I is what lets F run (#369). F, whose input I is not on hand, is still provisional with
+    // no production order.
     const run2 = await receiveAndRerun();
     expect(run2.R.proposals).toEqual([]);
+    expect(run2.I.provisional).toEqual([]);
+    expect(run2.I.proposals).toEqual([expect.objectContaining({ kind: "production-order", quantity: "10.000000", bom: iBom, bomRevision: 1, executable: true, document: expect.any(String) })]);
+    const iOrder = run2.I.proposals[0].document!;
+    expect(await user.get(`/production-orders/${iOrder}`)).toMatchObject({ output: intermediate, location, bom: iBom, revision: 1, quantity: "10.000000", status: "open", mrpRun: run2.I.run.id });
     expect(run2.F.proposals).toEqual([]);
     expect(run2.F.provisional).toEqual([expect.objectContaining({ quantity: "10.000000", bom: fBom, blockers: ["no-feasible-bom"] })]);
     expect(noSupply(run2.F), "F holds no supply").toBe(true);
     expect((await supply()).F).toEqual(NONE);
 
-    // I is made from the R on hand, through an order entered directly, and completed.
-    const iOrder = await user.post("/production-orders", { output: intermediate, location, quantity: "10", unit: "kg", plannedFinish: day(12) });
-    await user.post(`/production-orders/${iOrder.id}/completions`, { quantity: "10", unit: "kg", components: [{ material: raw, quantity: "20", unit: "kg" }] });
+    // I's production order is completed from the R on hand.
+    await user.post(`/production-orders/${iOrder}/completions`, { quantity: "10", unit: "kg", components: [{ material: raw, quantity: "20", unit: "kg" }] });
     const made = { R: RECEIVED, I: { ...NONE, productionOrders: 1, completions: 1 }, F: NONE };
     expect(await supply()).toEqual(made);
 
@@ -203,32 +207,9 @@ describe("automatic journeys: a falling forecast and a provisional hierarchy", (
     expect(await supply()).toEqual(done);
   }));
 
-  // E2E-021's "rerun after dependable supply permits higher-level executable orders": with R on hand, automatic run 2
-  // should create I's production order. It keeps I provisional (`provisional-demand`) because F, its only demand, is
-  // short of I itself (#369). Flips red when fixed.
-  it.fails("E2E-021 (#369): once R is on hand, the automatic rerun creates I's executable production order", async () => {
-    // Only the clauses below may fail: a setup that breaks returns instead, which `it.fails` reports as a failure.
-    let run2: Awaited<ReturnType<Awaited<ReturnType<typeof hierarchy>>["receiveAndRerun"]>>;
-    let iBom: string;
-    let iOrders: number;
-    try {
-      ({ run2, iBom, iOrders } = await withinOneDay(async () => {
-        const chain = await hierarchy("E2E-021 #369", false);
-        const plans = await chain.receiveAndRerun();
-        return { run2: plans, iBom: chain.iBom, iOrders: (await supplyOf(user, chain.intermediate, chain.location)).productionOrders };
-      }));
-    } catch (error) {
-      process.stdout.write(`E2E-021 (#369)'s setup failed, so the test reports a failure: ${String(error)}\n`);
-      return;
-    }
-    expect(run2.I.provisional).toEqual([]);
-    expect(run2.I.proposals).toEqual([expect.objectContaining({ kind: "production-order", quantity: "10.000000", bom: iBom, bomRevision: 1, executable: true, document: expect.any(String) })]);
-    expect(iOrders).toBe(1);
-  });
-
   it("UX-023: every request and answer of these journeys carried no price, cost, currency, invoice, tax, payment or accounting field", () => {
     // journeyApi failed any journey whose request or answer had one; this proves the journeys went through it.
     expect(user.state.checked).toBeGreaterThan(100);
-    expect(masters.state.checked).toBeGreaterThan(40);
+    expect(masters.state.checked).toBeGreaterThan(30);
   });
 });

@@ -1,6 +1,8 @@
 import { firmDemand } from "./demand/firm-demand";
 import { forecastDemand } from "./demand/forecast-demand";
 import { safetyLevels } from "./demand/safety-levels";
+import { isUsableRevision } from "../boms/bom-validity";
+import { isProcurementAllowed } from "../planning-parameters/procurement";
 import type { MrpBom, MrpInputs, MrpRecordKind } from "./mrp-inputs";
 import type {
   MrpComponentDemand,
@@ -19,7 +21,7 @@ import type {
   MrpSupply,
   MrpTransferMovement,
 } from "./mrp-result";
-import { horizonDates } from "./projection/horizon";
+import { horizonDates, MRP_HORIZON_DAYS } from "./projection/horizon";
 import { compareCodes, comparePairs, pairKey } from "./projection/pairs";
 import { emptyFlows, lowestDependableBalances, projectBuckets, type MrpLedger } from "./projection/project-buckets";
 import { pegProposals } from "./priority/peg-proposals";
@@ -28,12 +30,20 @@ import { productionMovements } from "./supply/production-orders";
 import { purchasingSupply } from "./supply/purchasing-supply";
 import { compareExceptions } from "./exceptions/compare-exceptions";
 import { bomLevels } from "./explosion/bom-levels";
-import { chooseBom } from "./explosion/choose-bom";
+import { chooseBom, type BomChoice } from "./explosion/choose-bom";
 import { explodeProposal } from "./explosion/explode-proposal";
 import { replenishPair, type TimedProposal } from "./sizing/replenish-pair";
+import { scheduleProposal } from "./sizing/schedule-proposal";
 import { planTransfers } from "./supply/transfers";
 import { lateRequisitionWarnings } from "./warnings/late-requisition";
 import { compareWarnings, overdueWarnings } from "./warnings/overdue";
+
+/**
+ * How an exploded proposal's needs count in its components (E17-S02 Q4, E17-S03, #369): a feasible proposal
+ * `claim`s them; an infeasible one's are `real` demand its components are sized for, or `provisional` when
+ * it would stay infeasible even if they were supplied. Neither of the last two counts in a feasibility test.
+ */
+type NeedKind = "claim" | "real" | "provisional";
 
 interface PairDraft extends MrpLedger {
   material: string;
@@ -92,7 +102,10 @@ interface PairDraft extends MrpLedger {
  * (Q4).
  *
  * Such a proposal is a provisional action (E17-S03, PRD §04 "Multilevel explosion"), in `provisional`, never
- * in `proposals`: its receipt is never booked, so its shortage stays visible after proposals. A Make pair is
+ * in `proposals`: its receipt is never booked, so its shortage stays visible after proposals. Its needs are
+ * real demand when MRP can supply every component it is short of (`canSupply`, #369): making them is what
+ * lets it run, so a Make component gets executable proposals for them once its own inputs are there.
+ * Otherwise they are provisional, as are all needs of an action sized for provisional demand. A Make pair is
  * sized again for the provisional demand its parents left it (`replenishPair`), and those proposals are
  * provisional too, chosen after every claim of the level and never claiming, so the mark carries down the
  * chain to the purchased level, whose requisitions stay executable. An open production order pinning an
@@ -189,12 +202,14 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
   }
   const provisional: MrpProvisionalAction[] = [];
   const plans: MrpPlan[] = [];
-  /** Each pair's provisional dependent demand by day (E17-S02 spec Q4): in its projection, never in a feasibility test. */
+  /** Each pair's dependent demand from infeasible proposals by day (E17-S02 spec Q4): in its projection, never in a feasibility test. */
+  const excludedOf = new Map<string, bigint[]>();
+  /** The provisional part of it (E17-S03), which the pair's executable proposals never cover (#369). */
   const provisionalOf = new Map<string, bigint[]>();
-  const noProvisional: readonly bigint[] = dates.map(() => 0n);
+  const noneExcluded: readonly bigint[] = dates.map(() => 0n);
   /**
    * Each tested component's `lowestDependableBalances`, computed once and dropped when a feasible choice
-   * claims from it. A provisional need is added to its demand and its exclusion alike, so it changes nothing.
+   * claims from it. An excluded need is added to its demand and its exclusion alike, so it changes nothing.
    */
   const lowestOf = new Map<string, bigint[]>();
   /**
@@ -206,8 +221,25 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
     const pair = pairs.get(key);
     if (!pair || unreadable.has(material)) return 0n;
     let lowest = lowestOf.get(key);
-    if (!lowest) lowestOf.set(key, (lowest = lowestDependableBalances(pair, provisionalOf.get(key) ?? noProvisional)));
+    if (!lowest) lowestOf.set(key, (lowest = lowestDependableBalances(pair, excludedOf.get(key) ?? noneExcluded)));
     return lowest[day];
+  };
+  /**
+   * Whether MRP can give `material` at `location` executable supply for a need on `date` (#369): its rows are
+   * readable, and its pair has a usable planning parameter set, Buy, or Make off any BOM cycle with a usable BOM
+   * valid on the planned finish of a proposal for that need, the day `replenishPair` checks. Each of
+   * `replenishPair`'s exceptions stops all of that pair's proposals, so a parent short of it can't run.
+   */
+  const canSupply = (material: string, location: string, date: string): boolean => {
+    const key = pairKey(material, location);
+    const parameters = parametersOf.get(key);
+    if (!parameters || unreadable.has(material) || invalidSets.has(key) || !isProcurementAllowed(parameters.materialType, parameters.procurement)) return false;
+    if (parameters.procurement === "buy") return true;
+    const { plannedFinish } = scheduleProposal(date, parameters.leadTimeDays, today, MRP_HORIZON_DAYS);
+    return !cycles.has(material) && (bomsOf.get(material) ?? []).some((bom) => isUsableRevision(bom, bom.inactiveComponents.length === 0, plannedFinish));
+  };
+  const add = (byDay: Map<string, bigint[]>, key: string, day: number, quantity: bigint) => {
+    (byDay.get(key) ?? byDay.set(key, dates.map(() => 0n)).get(key)!)[day] += quantity;
   };
   // A component's level is above every parent's, so a level's explosions only add to later levels, and its
   // pairs can all be sized before any of its proposals claims a component.
@@ -255,27 +287,31 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
       provisionalMakes.push(...replenished.provisional);
     }
     /**
-     * Explodes `proposal` through `bom` into its components' dependent demand. A provisional one's needs are
-     * also its components' `provisionalOf`, so no feasibility test counts them; a feasible one's claim drops
-     * the components' cached balances.
+     * Explodes `proposal` through `bom` into its components' dependent demand, counted as `need` says. A
+     * feasible one's claim drops the components' cached balances; an infeasible one's needs go into their
+     * `excludedOf`, so no feasibility test counts them, and a provisional one's into `provisionalOf` too.
      */
-    const explode = (proposal: TimedProposal, bom: MrpBom, isProvisional: boolean) => {
-      const items = explodeProposal(proposal, bom, isProvisional, sharesOf.get(proposal)!);
+    const explode = (proposal: TimedProposal, bom: MrpBom, need: NeedKind) => {
+      const items = explodeProposal(proposal, bom, need === "provisional", sharesOf.get(proposal)!);
       for (const item of items) {
         const key = pairKey(item.material, item.location);
         const component = pairOf(item.material, item.location);
         const day = dayOf.get(item.date)!;
         component.flows[day].dependentDemand += item.quantity;
         component.plannedComponentDemand.push(item);
-        if (!isProvisional) lowestOf.delete(key);
-        else (provisionalOf.get(key) ?? provisionalOf.set(key, dates.map(() => 0n)).get(key)!)[day] += item.quantity;
+        if (need === "claim") {
+          lowestOf.delete(key);
+          continue;
+        }
+        add(excludedOf, key, day, item.quantity);
+        if (need === "provisional") add(provisionalOf, key, day, item.quantity);
       }
       return items.map(({ material, quantity }) => ({ material, quantity })).sort((x, y) => compareCodes(x.material, y.material));
     };
     /** A Make proposal that can't execute, as a provisional action (E17-S03): never booked, never claiming. */
-    const keep = (proposal: TimedProposal, choice: ReturnType<typeof chooseBom>, blockers: MrpProvisionalBlocker[]) => {
+    const keep = (proposal: TimedProposal, choice: BomChoice, blockers: MrpProvisionalBlocker[], need: Exclude<NeedKind, "claim">) => {
       const { material, location, needDate, quantity, leadTimeDays, plannedStart, plannedFinish, lateDays, beyondHorizon } = proposal;
-      const components = explode(proposal, choice.bom, true);
+      const components = explode(proposal, choice.bom, need);
       provisional.push({
         kind: "production-order", material, location, needDate, quantity, leadTimeDays, plannedStart, plannedFinish, lateDays, beyondHorizon,
         bom: choice.bom.bom, bomRevision: choice.bom.revision, components, blockers, rejectedBoms: choice.rejected,
@@ -291,18 +327,19 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
       const choice = choose(proposal);
       if (choice.feasible) {
         book(proposal);
-        explode(proposal, choice.bom, false);
+        explode(proposal, choice.bom, "claim");
         proposals.push({ ...proposal, bom: choice.bom.bom, bomRevision: choice.bom.revision, feasible: true, rejectedBoms: choice.rejected });
         continue;
       }
-      keep(proposal, choice, ["no-feasible-bom"]);
-      const { material, location, needDate: date } = proposal;
+      // Real demand for its components when MRP can supply all it is short of, so making them is what lets it run (#369).
+      const { material, location, needDate: date, plannedStart } = proposal;
+      keep(proposal, choice, ["no-feasible-bom"], choice.shortages.every((short) => canSupply(short.material, location, plannedStart)) ? "real" : "provisional");
       exceptions.push({ code: "NO_FEASIBLE_BOM", material, location, date, rejections: choice.rejected });
     }
     // What only provisional needs drive, after every claim of the level, in the same order: chosen, never claiming (E17-S03 Q7).
     for (const proposal of provisionalMakes.sort(claimOrder)) {
       const choice = choose(proposal);
-      keep(proposal, choice, choice.feasible ? ["provisional-demand"] : ["no-feasible-bom", "provisional-demand"]);
+      keep(proposal, choice, choice.feasible ? ["provisional-demand"] : ["no-feasible-bom", "provisional-demand"], "provisional");
     }
     for (const { draft, replenished } of sized) {
       const { flows, ...plan } = draft;

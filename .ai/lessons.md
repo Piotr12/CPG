@@ -61,6 +61,7 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 ## Services, domain rules and errors
 
+- **2026-11-03 — Test an MRP executability rule over the reruns that carry it out, not one run** — #283 made every need of an infeasible parent provisional. Run 1 looked right, but once R arrived F ← I ← R stayed stuck, since I's only demand came from F, short of I itself (#369, found only by #291's journeys). Assert the next run with the previous run's supply on hand (`plan-mrp.test.ts`, "E2E-002, E2E-021"). Keep "out of feasibility tests" and "sized as provisional" as separate marks (`excludedOf`, `provisionalOf` in `plan-mrp.ts`): they answer different questions.
 - **2026-10-21 — Locks follow immutable posting history, not net progress** — a full reversal returns `received`/`fulfilled` to zero but doesn't make a document unprocessed. Derive identity and edit locks from immutable posting references (`postedReferences`, `services/stock/posted-references.ts`), keep explicitly closed lines closed, and let headers follow retained line states (#91, #138).
   - Replacing a line's material must archive the old line first, or the old FK, and its type/base-unit lock, is lost.
   - A transfer write-off has no stock movement, so transfer reversals link through their own append-only `TransferReversal`.

@@ -54,6 +54,10 @@ import { MRP_BATCH_LIMIT } from "./mrp-batch.service";
  * material no active BOM uses, so about a third of the production orders are at risk. A Make proposal no BOM
  * can supply is now a provisional action, stored apart from the recommendations, and a Make component is sized
  * a second time for its provisional demand.
+ *
+ * #369 makes a provisional parent's needs real demand when MRP can supply all it is short of. Every component here
+ * has its parameters and a usable BOM, so nothing is sized for a provisional parent any more, and the second
+ * sizing isn't timed at scale (follow-up #376).
  */
 const SIZES = [
   {
@@ -293,9 +297,9 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     expect(provisional).toBeGreaterThan(0);
     expect(actions).toBe(provisional + driven);
     expect(atRisk).toBeGreaterThan(0);
-    // With ten locations a provisional parent's components have nothing to spare, so their provisional needs are sized
-    // a second time; with one, the middle third's surplus covers them.
-    if (size.locations > 1) expect(driven).toBeGreaterThan(0);
+    // Every component has its parameters and a usable BOM, so MRP can supply whatever a provisional parent is short of:
+    // its needs are real demand, and no action is sized for a provisional parent's need (#369).
+    expect(driven).toBe(0);
     if (size.locations === 1) {
       expect(fallbacks).toBeGreaterThan(0);
       expect(made).toBeGreaterThan(0);
