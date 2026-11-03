@@ -53,6 +53,9 @@ jobs:
     needs: ci
     # The job that holds the secrets states the rule itself, whatever later becomes of `needs` (#360).
     if: github.ref == 'refs/heads/main'
+    # The deploy secrets live in this environment, and its branch rule lets only main use it. GitHub enforces the
+    # rule itself, so a branch's own copy of this file can't reach the secrets either (#368).
+    environment: production
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:

@@ -1,23 +1,25 @@
 // Deploy ships main only (#360). Deploy can be started by hand (workflow_dispatch) on any branch or tag; such a run
 // used to check that ref out, run CI on it and `kamal deploy` it. Now its first step fails the run, the deploy job
-// checks the ref itself, and a refused run stays out of the production queue.
+// checks the ref itself, and a refused run stays out of the production queue. A branch's own copy of deploy.yml can
+// drop all of that, so the deploy secrets live in the production environment, which only main may use (#368).
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, test } from "vitest";
 import { parse } from "yaml";
 
 type Step = { name?: string; uses?: string; run?: string };
-type Job = { needs?: string | string[]; if?: string; uses?: string; steps?: Step[] };
+type Job = { needs?: string | string[]; if?: string; uses?: string; environment?: unknown; secrets?: unknown; steps?: Step[] };
 type Workflow = {
   on: Record<string, unknown>;
   concurrency: { group: string; "cancel-in-progress"?: boolean };
   jobs: Record<string, Job>;
 };
 
-const source = readFileSync(join(import.meta.dirname, "..", ".github", "workflows", "deploy.yml"), "utf8");
+const WORKFLOWS = join(import.meta.dirname, "..", ".github", "workflows");
+const source = readFileSync(join(WORKFLOWS, "deploy.yml"), "utf8");
 const deploy = parse(source) as Workflow;
 const MAIN = "refs/heads/main";
 
@@ -52,6 +54,73 @@ test("only main queues as deploy-production, so a refused run can't cancel a mai
     "${{ github.ref == 'refs/heads/main' && 'deploy-production' || format('deploy-refused-{0}', github.run_id) }}",
   );
   assert.equal(deploy.concurrency["cancel-in-progress"], false);
+});
+
+test("the deploy job runs in the production environment, which holds the deploy secrets", () => {
+  assert.equal(deploy.jobs.deploy.environment, "production");
+});
+
+// Moving a secret into the environment keeps it from other refs only while every job that reads it names the
+// environment. GITHUB_TOKEN is GitHub's per-run token, not a repository secret.
+function readsSecret(value: unknown): boolean {
+  const expressions = JSON.stringify(value ?? null).match(/\$\{\{.*?\}\}/g) ?? [];
+  return expressions.some((expression) => /\bsecrets\b(?!\s*\.\s*github_token\b)/i.test(expression));
+}
+
+function secretViolations(file: string, workflow: Workflow): { violations: string[]; bound: string[] } {
+  const violations: string[] = [];
+  const bound: string[] = [];
+  const { jobs, ...rest } = workflow;
+  if (readsSecret(rest)) violations.push(`${file}: reads a secret outside its jobs`);
+  for (const [name, job] of Object.entries(jobs)) {
+    if (job.secrets !== undefined) violations.push(`${file} ${name}: passes secrets to a reusable workflow`);
+    if (!readsSecret(job)) continue;
+    if (job.environment === "production") bound.push(`${file} ${name}`);
+    else violations.push(`${file} ${name}: reads a secret without environment: production`);
+  }
+  return { violations, bound };
+}
+
+test("every job that reads a secret, in every workflow, is bound to production", () => {
+  const files = readdirSync(WORKFLOWS).filter((file) => /\.ya?ml$/.test(file));
+  const results = files.map((file) => secretViolations(file, parse(readFileSync(join(WORKFLOWS, file), "utf8")) as Workflow));
+  assert.deepEqual(results.flatMap((result) => result.violations), []);
+  // The scan must find the deploy job's two secrets, or it passes by finding nothing.
+  assert.deepEqual(results.flatMap((result) => result.bound), ["deploy.yml deploy"]);
+});
+
+describe("the secret scan", () => {
+  const workflow = (jobs: Record<string, Job>, rest: Partial<Workflow> & { env?: unknown } = {}) =>
+    ({ on: {}, concurrency: { group: "g" }, ...rest, jobs }) as Workflow;
+  const step = (run: string): Step[] => [{ run }];
+
+  it.each(["${{ secrets.SSH_PRIVATE_KEY }}", "${{ secrets['SSH_PRIVATE_KEY'] }}", '${{ secrets["X"] }}', "${{ toJSON(secrets) }}", "${{secrets.github_tokens}}"])(
+    "flags %s read without the environment",
+    (expression) => {
+      expect(secretViolations("w.yml", workflow({ build: { steps: step(`echo "${expression}"`) } })).violations).toEqual([
+        "w.yml build: reads a secret without environment: production",
+      ]);
+    },
+  );
+
+  it.each(["${{ secrets.GITHUB_TOKEN }}", "${{ secrets . github_token }}", "${{ github.token }}", "echo secrets.X"])("ignores %s", (text) => {
+    expect(secretViolations("w.yml", workflow({ build: { steps: step(text) } }))).toEqual({ violations: [], bound: [] });
+  });
+
+  it("accepts a secret read in a job bound to production, and no other environment", () => {
+    const read = step("echo ${{ secrets.X }}");
+    expect(secretViolations("w.yml", workflow({ a: { environment: "production", steps: read }, b: { environment: "staging", steps: read } }))).toEqual({
+      violations: ["w.yml b: reads a secret without environment: production"],
+      bound: ["w.yml a"],
+    });
+  });
+
+  it("flags secrets passed to a reusable workflow, and secrets read outside the jobs", () => {
+    expect(secretViolations("w.yml", workflow({ call: { uses: "./x.yml", secrets: "inherit" } }, { env: { KEY: "${{ secrets.X }}" } })).violations).toEqual([
+      "w.yml: reads a secret outside its jobs",
+      "w.yml call: passes secrets to a reusable workflow",
+    ]);
+  });
 });
 
 test("no script pastes the ref in with an expression", () => {
