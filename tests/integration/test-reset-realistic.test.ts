@@ -6,19 +6,13 @@ import type { MrpLatestView } from "@cpg/core";
 import { proxyResponseTimeoutSeconds } from "../deploy-config";
 import { allPages, callApi, json, untilOk } from "./api";
 import { clickHydrated, openBrowser, type Browser } from "./browser";
-import { openMrp, shown as shownOnScreen } from "./journeys";
+import { DAYS, openMrp, RUN_BUTTON, RUN_DIALOG, RUN_ID, RUN_SUBMIT, shown as shownOnScreen } from "./journeys";
 import { signInAsAdmin } from "./sign-in";
 import { createToken, openTokens } from "./tokens";
 
 const baseUrl = inject("baseUrl");
 const password = inject("adminPassword");
 const TOKEN = "reset-realistic-admin";
-/** The MRP screen's hooks, as `journeys.ts`'s `runOnScreen` uses them; this file times the steps between them. */
-const RUN_BUTTON = "main button[data-mrp-run]";
-const RUN_DIALOG = "[data-mrp-run-dialog]";
-const RUN_SUBMIT = `${RUN_DIALOG} button[data-mrp-run-submit]`;
-const RUN_ID = "main [data-mrp-field=id]";
-const DAYS = "table[aria-label='Days of the plan']";
 
 /** The first element matching `selector` outside Next.js's hidden staging container. */
 const shown = (selector: string) => `[...document.querySelectorAll(${JSON.stringify(selector)})].find((e) => !e.closest("[hidden]"))`;

@@ -152,10 +152,12 @@ export interface AuditEntry {
 /** The first element matching `selector` outside Next.js's hidden staging container and earlier, hidden pages. */
 export const shown = (selector: string) => `[...document.querySelectorAll(${JSON.stringify(selector)})].find((e) => !e.closest("[hidden]") && e.offsetParent !== null)`;
 const hydrated = (selector: string) => `Boolean(${shown(selector)}) && Object.keys(${shown(selector)}).some((key) => key.startsWith("__reactFiber"))`;
-const RUN_BUTTON = "main button[data-mrp-run]";
-const RUN_DIALOG = "[data-mrp-run-dialog]";
-const RUN_SUBMIT = `${RUN_DIALOG} button[data-mrp-run-submit]`;
-const RUN_ID = "main [data-mrp-field=id]";
+/** The MRP screen's hooks: Run MRP, its dialog and submit button, the run card's ID, and a plan's days table. */
+export const RUN_BUTTON = "main button[data-mrp-run]";
+export const RUN_DIALOG = "[data-mrp-run-dialog]";
+export const RUN_SUBMIT = `${RUN_DIALOG} button[data-mrp-run-submit]`;
+export const RUN_ID = "main [data-mrp-field=id]";
+export const DAYS = "table[aria-label='Days of the plan']";
 const ACCEPT_DIALOG = "[role=alertdialog][data-state=open]";
 
 /**
