@@ -3,7 +3,7 @@
 **Date:** 2026-11-03 10:17 UTC
 **Agent:** Claude Code / claude-opus-5-5 (`om-auto-fix-issue 369`, cezar task 122d83bd)
 **Spec:** `.ai/specs/implemented/2026-11-01--2049UTC-mrp-at-risk-and-provisional-plans.md` (E17-S03, Q5), amended by this fix
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -21,9 +21,16 @@ Fix #369. After R is received, MRP still keeps I provisional (`provisional-deman
 - 11:00 Updated the Help copy (EN/PL) and its test. Updated the service test, `mrp-run-api`, `mrp-report-api` and `mrp-report` (I's own No Feasible BOM). Changed the E2E-002 and E2E-021 journeys to make I through MRP, and deleted their `it.fails` tests.
 - 11:20 `mrp-run-timing.test.ts`: the ten-times fixture's components can all be supplied, so no action is sized for a provisional parent any more. The `driven > 0` assertion is now `driven === 0`, with the reason.
 
+- 11:55 Opened PR #375 and handed the lock from #369 to it. An independent review agent found nothing blocking, but raised five points:
+  - The exclusion test couldn't catch a dropped exclusion, because I's cached balance was never refreshed. A mutant that left real needs out of `excludedOf` stayed green. The test now puts H's claim between F and G; the mutant fails.
+  - `canSupply` checked the component's BOM on its need date, while `replenishPair` checks the proposal's planned finish, which is later for a late component. It now uses `scheduleProposal`, with a late-component case; the old date check fails that case. The spec amendment text follows.
+  - The timing benchmark no longer times the Q6 second sizing. Filed as #376 and noted in the file header.
+  - Stale doc comments in `mrp-result.ts` and `project-buckets.ts` were fixed.
+  - The Help wording overstated the rule: real demand reaches every component, not only the short ones. Reworded in EN and PL.
+
 ## Rule (E17-S03 Q5 amendment)
 
-An infeasible Make proposal sized for real demand passes **real** demand to its components when MRP can supply every component its chosen BOM is short of. A component can be supplied when its rows are readable and it has a usable set: not an invalid set, not raw Make. A Make component also needs to be off any BOM cycle and to have a usable BOM valid on the parent's planned start. Otherwise the needs stay provisional. Either way they count in no feasibility test of the parent's level.
+An infeasible Make proposal sized for real demand passes **real** demand to its components when MRP can supply every component its chosen BOM is short of. A component can be supplied when its rows are readable and it has a usable set: not an invalid set, not raw Make. A Make component also needs to be off any BOM cycle and to have a usable BOM valid on the planned finish of a proposal for the need. Otherwise the needs stay provisional. Either way they count in no feasibility test of the parent's level.
 
 ## Changes
 
@@ -45,4 +52,4 @@ An infeasible Make proposal sized for real demand passes **real** demand to its 
 
 ## Follow-ups
 
-- none yet
+- #376: force provisional-parent demand in the MRP timing benchmark again, so the Q6 second sizing is timed at scale.

@@ -2731,24 +2731,30 @@ describe("planMrp: a parent's needs are real when MRP can supply all it is short
   });
 
   it("keeps an infeasible parent's real needs out of its level's feasibility tests, so a later parent still claims what is on hand (E17-S02 Q4)", () => {
-    // 5 I on hand. F needs 10 I from day 4 and can't run; G needs 5 I from day 8 and can. F's 10 are I's real demand,
-    // which I's proposal covers, but G's choice never counts them, or G would find I short.
+    // 6 I on hand. F needs 10 I from day 4 and can't run; H needs 1 from day 6 and G 5 from day 8, and both can. F's 10
+    // are I's real demand, which I's proposals cover, but no later choice counts them: H's claim drops I's cached
+    // balance, so G's choice reads it again, and would find I short if F's 10 counted.
     const result = planMrp(
       inputs({
-        stock: [stock("I", "L1", "5"), stock("R", "L1", "100")],
-        orderLines: [line({ material: "F", quantity: q("10"), requiredDate: day(6) }), line({ material: "G", quantity: q("5"), requiredDate: day(10) })],
-        planningParameters: [params("F", "make"), params("G", "make"), params("I", "make"), params("R", "buy")],
-        boms: [recipe("F", { I: "1" }), recipe("G", { I: "1" }, { bom: "00000002" }), recipe("I", { R: "1" }, { bom: "00000003" })],
+        stock: [stock("I", "L1", "6"), stock("R", "L1", "100")],
+        orderLines: [
+          line({ material: "F", quantity: q("10"), requiredDate: day(6) }),
+          line({ material: "H", quantity: q("1"), requiredDate: day(8) }),
+          line({ material: "G", quantity: q("5"), requiredDate: day(10) }),
+        ],
+        planningParameters: [params("F", "make"), params("G", "make"), params("H", "make"), params("I", "make"), params("R", "buy")],
+        boms: [recipe("F", { I: "1" }), recipe("G", { I: "1" }, { bom: "00000002" }), recipe("H", { I: "1" }, { bom: "00000004" }), recipe("I", { R: "1" }, { bom: "00000003" })],
       }),
       TODAY,
     );
-    expect(result.proposals.map(({ material, needDate, quantity, feasible }) => [material, needDate, quantity, feasible])).toEqual([
+    expect(result.proposals.filter(({ material }) => material !== "I").map(({ material, needDate, quantity, feasible }) => [material, needDate, quantity, feasible])).toEqual([
       ["G", day(10), q("5"), true],
-      ["I", day(4), q("5"), true],
-      ["I", day(8), q("5"), true],
+      ["H", day(8), q("1"), true],
     ]);
     expect(actionsOf(result, "F")).toEqual([[q("10"), ["no-feasible-bom"]]]);
-    expect(planAt(result.plans, "I").plannedComponentDemand.map(({ parent, provisional }) => [parent, provisional])).toEqual([["F", false], ["G", false]]);
+    expect(planAt(result.plans, "I").plannedComponentDemand.map(({ parent, provisional }) => [parent, provisional])).toEqual([["F", false], ["H", false], ["G", false]]);
+    // I's executable proposals cover all 16 it is asked for, F's 10 included, less the 6 on hand.
+    expect(result.proposals.filter(({ material }) => material === "I").reduce((sum, { quantity }) => sum + quantity, 0n)).toBe(q("10"));
   });
 
   // F needs 1 I and 1 U; 20 R are on hand, so I alone could be made. Each U below is one MRP can't supply, so F stays
@@ -2767,7 +2773,7 @@ describe("planMrp: a parent's needs are real when MRP can supply all it is short
     ["Make with no BOM", { planningParameters: [params("U", "make")] }],
     ["Make on a BOM cycle", { planningParameters: [params("U", "make")], boms: [recipe("U", { U: "1" }, { bom: "00000009" })] }],
     ["Make whose only BOM has an inactive component", { planningParameters: [params("U", "make")], boms: [recipe("U", { R: "1" }, { bom: "00000009", inactiveComponents: ["R"] })] }],
-    ["Make whose only BOM is valid only after F's start", { planningParameters: [params("U", "make")], boms: [recipe("U", { R: "1" }, { bom: "00000009", validFrom: day(13) })] }],
+    ["Make whose only BOM is valid only after its proposal's finish", { planningParameters: [params("U", "make")], boms: [recipe("U", { R: "1" }, { bom: "00000009", validFrom: day(13) })] }],
   ])("keeps the need provisional when F is also short of U with %s", (_, u) => {
     const result = withU(u);
     expect(proposalsOf(result, "I")).toEqual([]);
@@ -2791,8 +2797,15 @@ describe("planMrp: a parent's needs are real when MRP can supply all it is short
     ]);
   });
 
-  it("makes the need real when F's other shortage is one MRP can supply: U bought, or U made through a BOM valid on F's start", () => {
-    for (const u of [{ planningParameters: [params("U", "buy")] }, { planningParameters: [params("U", "make")], boms: [recipe("U", { V: "1" }, { bom: "00000009", validFrom: day(12) })] }]) {
+  it("makes the need real when F's other shortage is one MRP can supply: U bought, or U made through a BOM valid on its proposal's finish", () => {
+    const fromDay = (offset: number) => [recipe("U", { V: "1" }, { bom: "00000009", validFrom: day(offset) })];
+    for (const u of [
+      { planningParameters: [params("U", "buy")] },
+      // On time, U's proposal finishes on F's start, day 12.
+      { planningParameters: [params("U", "make")], boms: fromDay(12) },
+      // 20 days' lead time makes U late: its proposal starts today and finishes on day 20, the day Missing BOM checks (#317).
+      { planningParameters: [params("U", "make", { leadTimeDays: 20 })], boms: fromDay(20) },
+    ]) {
       const result = withU(u);
       expect(proposalsOf(result, "I")).toEqual([["production-order", day(12), q("10"), true]]);
       expect(actionsOf(result, "I")).toEqual([]);

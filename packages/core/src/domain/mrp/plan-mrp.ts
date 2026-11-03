@@ -21,7 +21,7 @@ import type {
   MrpSupply,
   MrpTransferMovement,
 } from "./mrp-result";
-import { horizonDates } from "./projection/horizon";
+import { horizonDates, MRP_HORIZON_DAYS } from "./projection/horizon";
 import { compareCodes, comparePairs, pairKey } from "./projection/pairs";
 import { emptyFlows, lowestDependableBalances, projectBuckets, type MrpLedger } from "./projection/project-buckets";
 import { pegProposals } from "./priority/peg-proposals";
@@ -33,6 +33,7 @@ import { bomLevels } from "./explosion/bom-levels";
 import { chooseBom, type BomChoice } from "./explosion/choose-bom";
 import { explodeProposal } from "./explosion/explode-proposal";
 import { replenishPair, type TimedProposal } from "./sizing/replenish-pair";
+import { scheduleProposal } from "./sizing/schedule-proposal";
 import { planTransfers } from "./supply/transfers";
 import { lateRequisitionWarnings } from "./warnings/late-requisition";
 import { compareWarnings, overdueWarnings } from "./warnings/overdue";
@@ -226,14 +227,16 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
   /**
    * Whether MRP can give `material` at `location` executable supply for a need on `date` (#369): its rows are
    * readable, and its pair has a usable planning parameter set, Buy, or Make off any BOM cycle with a usable BOM
-   * valid that day. `replenishPair`'s exceptions stop every other pair's proposals, so its parents can't run.
+   * valid on the planned finish of a proposal for that need, the day `replenishPair` checks. Each of
+   * `replenishPair`'s exceptions stops all of that pair's proposals, so a parent short of it can't run.
    */
   const canSupply = (material: string, location: string, date: string): boolean => {
     const key = pairKey(material, location);
     const parameters = parametersOf.get(key);
     if (!parameters || unreadable.has(material) || invalidSets.has(key) || !isProcurementAllowed(parameters.materialType, parameters.procurement)) return false;
     if (parameters.procurement === "buy") return true;
-    return !cycles.has(material) && (bomsOf.get(material) ?? []).some((bom) => isUsableRevision(bom, bom.inactiveComponents.length === 0, date));
+    const { plannedFinish } = scheduleProposal(date, parameters.leadTimeDays, today, MRP_HORIZON_DAYS);
+    return !cycles.has(material) && (bomsOf.get(material) ?? []).some((bom) => isUsableRevision(bom, bom.inactiveComponents.length === 0, plannedFinish));
   };
   const add = (byDay: Map<string, bigint[]>, key: string, day: number, quantity: bigint) => {
     (byDay.get(key) ?? byDay.set(key, dates.map(() => 0n)).get(key)!)[day] += quantity;

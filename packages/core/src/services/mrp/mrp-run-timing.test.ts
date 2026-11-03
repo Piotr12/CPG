@@ -54,6 +54,10 @@ import { MRP_BATCH_LIMIT } from "./mrp-batch.service";
  * material no active BOM uses, so about a third of the production orders are at risk. A Make proposal no BOM
  * can supply is now a provisional action, stored apart from the recommendations, and a Make component is sized
  * a second time for its provisional demand.
+ *
+ * #369 makes a provisional parent's needs real demand when MRP can supply all it is short of. Every component here
+ * has its parameters and a usable BOM, so nothing is sized for a provisional parent any more, and the second
+ * sizing isn't timed at scale (follow-up #376).
  */
 const SIZES = [
   {

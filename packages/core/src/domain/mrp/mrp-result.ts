@@ -202,9 +202,10 @@ export interface MrpPlannedComponentDemand {
    */
   roots: readonly MrpDemandShare[];
   /**
-   * The need is a provisional action's (E17-S03): a proposal with no feasible BOM, exploded through its
-   * highest-priority usable one (E17-S02, BOM-011), or one sized only for a provisional parent's need. It
-   * counts in the component's projection, but never in a later feasibility test.
+   * The need is provisional (E17-S03): a provisional action's that stays infeasible even with this component
+   * supplied, since MRP can't supply something else it is short of (#369), or one sized only for a provisional
+   * parent's need. The component's executable proposals never cover it. Like every need of a proposal with no
+   * feasible BOM, real or not, it counts in the component's projection but never in a later feasibility test.
    */
   provisional: boolean;
 }
@@ -562,8 +563,8 @@ export interface MrpProvisionalComponent {
 
 /**
  * A hypothetical production order of a provisional plan (E17-S03, MRP-047, BOM-011): sized and timed like
- * a proposal and exploded through `bom`, its every component need provisional, but never executable, never
- * a receipt in any balance and never a claim on a component.
+ * a proposal and exploded through `bom`, its component needs provisional unless MRP can supply all it is short
+ * of (#369), but never executable, never a receipt in any balance and never a claim on a component.
  */
 export interface MrpProvisionalAction extends MrpProposalTiming {
   kind: "production-order";
