@@ -172,9 +172,11 @@ describe("the stock report in the UI", () => {
       await una.open(`${baseUrl}/admin/prod/stock?material=${ids.steel}&location=${ids.plant}`);
       await una.waitUntil(ready(shown("a[href='/admin/prod/reports/stock']")));
       await una.click("main a[href='/admin/prod/reports/stock']");
-      await una.waitUntil(`location.pathname === "/admin/prod/reports/stock"`);
-      await una.waitUntil(`${shown(report)}?.textContent.includes("srui steel")`);
+      await una.waitUntil(`location.pathname === "/admin/prod/reports/stock" && Boolean(${shown(report)})`);
       await una.waitForText("Prod is read-only");
+      // Other files' Prod stock can fill the first page (lesson 2026-11-02), so this file's row is read through the filter.
+      await open(`?material=${ids.steel}`);
+      expect((await rows()).map(([material]) => material)).toEqual([`${ids.steel} — srui steel`, `${ids.steel} — srui steel`]);
     } finally {
       expect((await callApi(baseUrl, "PATCH", "/api/tenants/prod", secret, { key: randomUUID(), body: { readOnly: false } })).status).toBe(200);
     }
