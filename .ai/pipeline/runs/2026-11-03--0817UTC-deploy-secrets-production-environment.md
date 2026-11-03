@@ -21,10 +21,16 @@ Branch protection, reviewers or timers on the environment, `ci.yml`, `spec-copie
 - 08:15 UTC — spec PR #370 (design only, `Refs #368`).
 - 08:17 UTC — implementation branch `feat/deploy-secrets-production-environment` from `origin/main`. Deviation from the feature route's `Closes`: this PR references #368 (spec Q7), because merging can't delete the repository secrets.
 
+- 08:40 UTC — fresh-context review: approve. Fixed in 454be7ca: the scan now reads every string holding an expression (an expression containing `}}` slipped past) and refuses a job calling another repository's workflow; the spec notes that the rule ties the secrets to the `main` ref, not reviewed code (filed as #371), and where the secret values come from. The docs stating the secrets live in `production` are accurate once owner steps 1–2 precede the merge (the PR body asks for that).
+
 ## Verification
-- Mutations: deleting `environment: production` fails 2 tests; adding a `ci.yml` job that echoes `secrets.SSH_PRIVATE_KEY` fails the scan.
+- Full gate on 3b39b630: `npm run lint` 0, `npm run typecheck` 0, `npm run test:coverage` 0 (677 files, 5,645 passed, 2 skipped, 100% coverage), `npm run build` 0.
+- After 454be7ca: lint 0, typecheck 0, `npx vitest run tests/deploy-workflow.test.ts tests/spec-copies-workflows.test.ts tests/ai-filenames.test.ts tests/spec-images.test.ts` 48 passed. Only test code and the spec changed, so coverage and build were not re-run.
+- Mutations (re-run after 454be7ca): deleting `environment: production` fails 2 tests; adding a `ci.yml` job that echoes `secrets.SSH_PRIVATE_KEY` fails the scan.
+- No integration test, because no page or flow changes. The environment rule itself can only be checked on GitHub, by the owner (spec step 4).
 
 ## Follow-ups
+- #371: protect `main`, so the environment's secrets reach reviewed code only.
 - Owner: the five settings steps in the spec (environment and `main` rule, its secrets, merge, check a `main` deploy, delete the repository secrets), then close #368.
 
 ## Risks
@@ -37,7 +43,7 @@ PR: (pending)
 
 ### Phase 1: The environment, its test and the docs
 
-- [ ] 1.1 The environment, its test and the docs
+- [x] 1.1 The environment, its test and the docs — 3b39b630
 
 ### Review
-- [ ] R.1 Fresh-context review
+- [x] R.1 Fresh-context review (approve: 1 medium design limit filed as #371, 2 low and 3 nits) fixed — 454be7ca
