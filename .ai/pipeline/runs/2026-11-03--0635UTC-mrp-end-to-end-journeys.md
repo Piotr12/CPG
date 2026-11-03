@@ -45,10 +45,10 @@ Integration tests that run the twelve cross-domain journeys (E2E-001, 002, 003, 
 - [x] 1.2 e2e-supply-chain: E2E-001, E2E-015 — 128a081d
 - [x] 1.3 e2e-planning: E2E-002, E2E-003, E2E-016 — 2a5570df
 - [x] 1.4 e2e-corrections: E2E-007, E2E-008, E2E-012, E2E-019 — 6a573f01
-- [ ] 1.5 e2e-automatic: E2E-005, E2E-021
+- [x] 1.5 e2e-automatic: E2E-005, E2E-021 — cb9e4ce9
 - [x] 1.6 E2E-010 MRP half — 562c34b9
 - [x] 1.7 Realistic screen run — 562c34b9
-- [ ] 1.8 UX-023 file-level assertions
+- [x] 1.8 UX-023 file-level assertions — 128a081d, 2a5570df, 6a573f01, cb9e4ce9
 
 ### Phase 2: Verification and catalogue
 
