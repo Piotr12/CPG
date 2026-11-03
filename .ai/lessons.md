@@ -184,7 +184,7 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
   - Read a page only after `waitUntil` its document holds what you read (#166), and wait for client-applied `<html>` attributes after a soft navigation.
 - **2026-10-23 — Never navigate while a form's server action is in flight** — opening another page cancels the answer carrying the session cookie (#164). A helper that submits waits for the form's answer (`signInAnswered`).
 - **2026-10-23 — agent-browser semantics and quirks** — how the commands behave here:
-  - `browser.ts` runs the native binary (the npm wrapper costs ~70 ms a command) and polls waits in the page, keeping the native semantics: a throwing expression is false, 25 s timeout, first match's visibility, case-sensitive `innerText` substring. Wrap `wait --fn` expressions in `Boolean(…)`, since a returned DOM element fails over CDP.
+  - `browser.ts` runs the native binary (the npm wrapper costs ~70 ms a command) and polls waits in the page, keeping the native semantics: a throwing expression is false, 25 s timeout, first match's visibility, case-sensitive `innerText` substring. Wrap `wait --fn` expressions in `Boolean(…)`, since a returned DOM element fails over CDP. A timed-out wait's error ends with the page's state (`waitTimedOut`); read it before guessing at a flake's cause (#373).
   - Read `eval` output with `--json` (`evaluate()`), and give each test its own `--session`.
   - `fill` doesn't work on a `<select>` (use `select`) or a date input (use `fillDate`, and assert the value). Find icon buttons by `aria-label`.
   - Pass absolute paths to `screenshot`: relative ones land in the daemon's directory.
