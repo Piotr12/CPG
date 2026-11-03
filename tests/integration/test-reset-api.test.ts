@@ -1,8 +1,10 @@
 import { randomUUID } from "node:crypto";
 import writeXlsxFile from "write-excel-file/node";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import type { MrpLatestView } from "@cpg/core";
 import { allPages, callApi, json, LIST_PAGE_SIZE } from "./api";
 import { openBrowser, type Browser } from "./browser";
+import { runOnScreen } from "./journeys";
 import { signInAs, signInAsAdmin, signedInAs } from "./sign-in";
 import { createToken, openTokens } from "./tokens";
 
@@ -69,6 +71,21 @@ describe("atomic Test reset through the bearer API", () => {
     stock: await Promise.all([prod.source, prod.destination].map((location) => get(`/api/tenants/prod/stock?material=${prod.material}&location=${location}`))),
   });
   const accounts = async () => (await get("/api/users") as { username: string }[]).filter(({ username }) => users.includes(username));
+  /**
+   * Every page of Prod's latest MRP report, read as the run `run` (`?run=`, which a newer run would refuse). The report
+   * pages by `MRP_LATEST_PAGE_SIZE` pairs, not by `LIST_PAGE_SIZE`, so `allPages` would stop after its first page: the
+   * walk goes by the read's own `total` and `pageSize`.
+   */
+  const prodRunPages = async (run: string) => {
+    const pages: MrpLatestView[] = [];
+    for (let page = 1; page === 1 || (page - 1) * pages[0].pageSize < pages[0].total; page += 1) {
+      const response = await api("GET", `/api/tenants/prod/mrp/runs/latest?run=${run}&page=${page}`);
+      expect(response.status, response.text).toBe(200);
+      pages.push(json(response).data as MrpLatestView);
+    }
+    expect(pages.flatMap(({ plans }) => plans)).toHaveLength(pages[0].total);
+    return pages;
+  };
 
   beforeAll(async () => {
     admin = openBrowser();
@@ -217,13 +234,24 @@ describe("atomic Test reset through the bearer API", () => {
     expect(reused.status).toBe(200); expect(json(reused).data.id).toBe("00000031");
   });
 
-  it("lets a normal user post a Prod goods receipt while the admin resets Test; the receipt alone changes Prod (E2E-010)", async () => {
+  it("lets a normal user post a Prod goods receipt while the admin resets Test; the receipt alone changes Prod, Prod's MRP results stay the run's and Test's run is cleared (E2E-010)", async () => {
     await write("PATCH", "/api/tenants/test", { readOnly: false });
     const generation = (await test()).generation;
     // Test has its demo stock and an audit entry of its own to clear.
     const firstMaterial = (await materials())[0];
     expect((await write("PATCH", `/api/tenants/test/materials/${firstMaterial.id}`, { version: firstMaterial.version, description: "reset-api E2E-010" }, generation)).status).toBe(200);
     expect((json(await api("GET", "/api/tenants/test/audit")).data as AuditPage).entries.length).toBeGreaterThan(0);
+    // E2E-010's MRP half (spec Q8): Prod's results come from a run the user who posts the receipt starts on the screen,
+    // and Test has a run of its own, through the API, for the reset to clear.
+    await people[0].setViewport(1280, 800);
+    const prodRun = await runOnScreen(people[0], baseUrl, "prod", { material: prod.material, location: prod.source });
+    const testRun = await created("/api/tenants/test/mrp/runs", {}, generation) as { id: string };
+    expect(json(await api("GET", "/api/tenants/test/mrp/runs/latest")).data.run).toMatchObject({ id: testRun.id, channel: "api" });
+    const mrpBefore = await prodRunPages(prodRun);
+    expect(mrpBefore[0].run).toMatchObject({ id: prodRun, channel: "ui", account: users[0], mode: "manual" });
+    // The receipt's pair is in the run, at the stock it had then: a report recomputed after the receipt would read 8.
+    const receiptPair = mrpBefore.flatMap(({ plans }) => plans).find(({ material, location }) => material === prod.material && location === prod.source);
+    expect(receiptPair?.buckets[0]).toMatchObject({ date: today(), projectedBefore: "6.000000" });
     const before = await prodState();
     const accountsBefore = await accounts();
 
@@ -257,6 +285,13 @@ describe("atomic Test reset through the bearer API", () => {
     for (const entry of added) expect(entry).toMatchObject({ actor: { username: users[0] }, channel: "api" });
     expect(ids(after.audit)).toEqual([...added.map(({ id }) => id), ...ids(before.audit)].slice(0, after.audit.entries.length));
     expect(await accounts()).toEqual(accountsBefore);
+    // Prod's MRP results are the run's, unchanged on every page though the receipt posted since (R10); Test's run is gone.
+    const mrpAfter = await prodRunPages(prodRun);
+    expect(mrpAfter[0].run).toMatchObject({ id: prodRun, createdAt: mrpBefore[0].run.createdAt });
+    expect(mrpAfter).toEqual(mrpBefore);
+    const testLatest = await api("GET", "/api/tenants/test/mrp/runs/latest");
+    expect(testLatest.status, testLatest.text).toBe(404);
+    expect(json(testLatest).error.code).toBe("MRP_RUN_NOT_FOUND");
   });
 
   it("refuses a goods issue an agent retries under the old generation after a reset; G2 stock, issues and Prod are unchanged and the token works on G2 (E2E-020)", async () => {

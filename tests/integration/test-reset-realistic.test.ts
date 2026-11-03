@@ -1,14 +1,24 @@
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import type { MrpLatestView } from "@cpg/core";
 import { proxyResponseTimeoutSeconds } from "../deploy-config";
 import { allPages, callApi, json, untilOk } from "./api";
 import { clickHydrated, openBrowser, type Browser } from "./browser";
+import { openMrp, shown as shownOnScreen } from "./journeys";
 import { signInAsAdmin } from "./sign-in";
 import { createToken, openTokens } from "./tokens";
 
 const baseUrl = inject("baseUrl");
 const password = inject("adminPassword");
 const TOKEN = "reset-realistic-admin";
+/** The MRP screen's hooks, as `journeys.ts`'s `runOnScreen` uses them; this file times the steps between them. */
+const RUN_BUTTON = "main button[data-mrp-run]";
+const RUN_DIALOG = "[data-mrp-run-dialog]";
+const RUN_SUBMIT = `${RUN_DIALOG} button[data-mrp-run-submit]`;
+const RUN_ID = "main [data-mrp-field=id]";
+const DAYS = "table[aria-label='Days of the plan']";
 
 /** The first element matching `selector` outside Next.js's hidden staging container. */
 const shown = (selector: string) => `[...document.querySelectorAll(${JSON.stringify(selector)})].find((e) => !e.closest("[hidden]"))`;
@@ -30,6 +40,18 @@ describe("the realistic Test dataset, written by an API reset", () => {
   const generation = async () => (json(await api("GET", "/api/tenants/test")).data as { generation: number }).generation;
   const reset = async (body: unknown) => api("POST", "/api/tenants/test/reset", { key: randomUUID(), body, generation: await generation() });
   const ledger = async () => (await tableRows(admin, "Stock movements")).map(([date, type, , source, reason]) => ({ date, type, source, reason }));
+  /**
+   * Keeps a viewport screenshot as showcase evidence (spec Q9, D01) when `CPG_SHOWCASE_DIR` names an absolute directory:
+   * `element` is scrolled to the top of the viewport first. Nothing is written otherwise, so CI keeps no images.
+   */
+  const showcase = async (file: string, element: string) => {
+    const directory = process.env.CPG_SHOWCASE_DIR;
+    if (!directory) return;
+    expect(path.isAbsolute(directory), `CPG_SHOWCASE_DIR must be absolute: ${directory}`).toBe(true);
+    await admin.evaluate(`${element}.scrollIntoView({ block: "start" })`);
+    await admin.screenshot(path.join(directory, file));
+    expect(existsSync(path.join(directory, file))).toBe(true);
+  };
 
   beforeAll(async () => {
     admin = openBrowser();
@@ -119,6 +141,53 @@ describe("the realistic Test dataset, written by an API reset", () => {
     expect((json(response).data as { pairs: number }).pairs).toBeGreaterThanOrEqual(30);
     expect(up.status).toBe(200);
     expect(upMs).toBeLessThan(runMs);
+  });
+
+  // Before the tests that add documents, so the screen plans the realistic dataset as the reset wrote it (spec Q9, D01).
+  it("runs MRP on the screen over the realistic dataset within tolerance while /up answers, and opens the first pair's days (E14-S02, D01)", async () => {
+    await openMrp(admin, baseUrl, "test");
+    expect(await admin.evaluate<number[]>("[innerWidth, innerHeight]")).toEqual([1280, 800]);
+    const before = await admin.evaluate<string>(`${shownOnScreen(RUN_ID)}?.textContent ?? ""`);
+    await admin.click(RUN_BUTTON);
+    await admin.waitUntil(`Boolean(${shownOnScreen(RUN_SUBMIT)}) && Object.keys(${shownOnScreen(RUN_SUBMIT)}).some((key) => key.startsWith("__reactFiber"))`);
+    // Manual is kept: the dialog opens on it, and nothing is clicked but Run MRP.
+    expect(await admin.evaluate<boolean>(`document.querySelector("${RUN_DIALOG} input[value=manual]").checked`)).toBe(true);
+    // A warm pooled connection first, as kamal-proxy keeps one; Node's fetch reuses it for the probe.
+    expect((await fetch(`${baseUrl}/up`)).status).toBe(200);
+
+    const started = performance.now();
+    await admin.click(RUN_SUBMIT);
+    let runMs = 0;
+    const shownRun = admin.waitUntil(`(${shownOnScreen(RUN_ID)}?.textContent ?? "") !== ${JSON.stringify(before)} && !document.querySelector("${RUN_DIALOG}")`)
+      .then(() => { runMs = performance.now() - started; });
+    // Issued right after the click, while the page waits for the run: it answers first unless the run blocks the event loop.
+    const up = await fetch(`${baseUrl}/up`);
+    const upMs = performance.now() - started;
+    await shownRun;
+
+    process.stdout.write(`An MRP run on the screen over the realistic Test dataset showed its run ID ${runMs.toFixed(0)} ms after the click; GET /up issued right after it answered after ${upMs.toFixed(0)} ms\n`);
+    expect(up.status).toBe(200);
+    expect(upMs).toBeLessThan(runMs);
+    // A tolerance, not the budget: E14-S02's realistic 1 s, which the unit benchmark holds, times the CI factor 6 of the timing tests.
+    expect(runMs).toBeLessThan(6 * 1_000);
+    const id = await admin.evaluate<string>(`${shownOnScreen(RUN_ID)}.textContent`);
+    const latest = json(await api("GET", "/api/tenants/test/mrp/runs/latest")).data as MrpLatestView;
+    expect(latest.run).toMatchObject({ id, channel: "ui", account: "admin", mode: "manual", horizonDays: 90 });
+    expect(latest.run.pairs).toBeGreaterThanOrEqual(30);
+    expect(await admin.evaluate<string>(`${shownOnScreen("main [data-mrp-field=creation]")}.textContent`)).toBe("Manual");
+    // From the page's heading, so the Run MRP button shows above the run card.
+    await showcase("mrp-realistic-run-card.png", shownOnScreen("main h1"));
+
+    // The report's first pair, through its Days link: its 90 days, today first.
+    const [first] = latest.plans;
+    await clickHydrated(admin, `main table[aria-label="Planned material–location pairs"] tbody tr:first-child a[aria-label^="Days of"]`);
+    await admin.waitUntil(`location.search === "?material=${first.material}&location=${first.location}" && Boolean(${shownOnScreen(DAYS)})`);
+    expect(await admin.evaluate<string>(`${shownOnScreen("[data-mrp-plan-heading]")}.textContent`))
+      .toBe(`${first.material} ${first.materialDescription} at ${first.location} ${first.locationName}`);
+    expect(await admin.evaluate<string[]>(`[...${shownOnScreen(DAYS)}.querySelectorAll("tbody tr [data-mrp-date]")].map((cell) => cell.textContent)`))
+      .toEqual(first.buckets.map(({ date }) => date));
+    expect(first.buckets).toHaveLength(90);
+    await showcase("mrp-realistic-report.png", shownOnScreen("[data-mrp-plan-heading]"));
   });
 
   it("reruns MRP over many pages of requisitions, purchase orders and production orders and edits none of them (E19-S02, R10, RUN-013)", async () => {
