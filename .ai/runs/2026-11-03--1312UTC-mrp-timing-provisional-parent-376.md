@@ -3,7 +3,7 @@
 **Date:** 2026-11-03 13:12 UTC
 **Agent:** Claude Code / Opus 5.5 (`om-auto-fix-issue`, dispatched by cezar)
 **Spec:** none (E17-S03 Q6 is the behaviour timed; no spec change)
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -30,4 +30,8 @@ Since #369 (PR #375), `mrp-run-timing.test.ts` sizes no action for a provisional
 - Full gate: `npm run lint`, `npm run typecheck`, `npm run test:coverage` (678 files, 5,667 passed, 2 skipped; 100% statements, branches, functions, lines), `npm run build`: all exit 0.
 - No integration test: the change is a unit-test fixture only, with no page, route or migration.
 
+- PR #377 opened; `om-auto-review-pr --autofix` approved it (0 findings; posted as a comment review, since GitHub refuses an author's approval). A probe of the realistic run confirmed No Feasible BOM falls only on middle-third materials, so `driven` stays 0 with one location by the fixture's shape. Labels `merge-queue`, `refactor`, `skip-qa`, `priority-low`, `risk-low`. UI QA skipped: no user-facing surface.
+
 ## Follow-ups
+
+- None. CI on the PR is the remaining gate.
