@@ -41,7 +41,7 @@
 - `npm run test:coverage`: 675 of 678 files passed; 8 tests in 3 files failed on timeouts while the machine ran at load average ~10.5 (other sessions): `mrp-run-timing.test.ts` (39 s against a 1.5 s bound), `seed-demo-data.test.ts` and `test-reset.service.test.ts` (realistic two-year dataset, 300 s limit). This change touches no package code; the same tests passed in CI on the base commit `c3325d75` (Deploy run, 2026-11-03 10:12 UTC). Run alone, `seed-demo-data` passed and one `test-reset` test still timed out (867 s, with the integration run beside it). CI is the verdict for these.
 - `npm run test:integration -- tests/integration/audit-history.test.ts` against a local standalone server (no Docker on this machine): ✅ 9/9.
 - Forced timeout on the real app: the error names the sign-in redirect (above); re-checked after the review fixes (`checkVisibility()` in Chrome).
-- PR #374 CI on the first commit: all 12 checks green (lint, typecheck, build, unit shards, timing, 100% coverage, 4 integration shards).
+- PR #374 CI on the first commit: all 12 checks green (lint, typecheck, build, unit shards, timing, 100% coverage, 4 integration shards). CI on 90796a5b (review fixes): all 11 checks green.
 
 ## Follow-ups
 
