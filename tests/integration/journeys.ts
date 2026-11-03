@@ -103,8 +103,12 @@ export function journeyApi(baseUrl: string, token: string | (() => string), tena
     get: <T = any>(path: string) => ok<T>("GET", path), // eslint-disable-line @typescript-eslint/no-explicit-any
     post: <T = any>(path: string, body: unknown = {}) => ok<T>("POST", path, body), // eslint-disable-line @typescript-eslint/no-explicit-any
     patch: <T = any>(path: string, body: unknown) => ok<T>("PATCH", path, body), // eslint-disable-line @typescript-eslint/no-explicit-any
-    /** Every row of a paged tenant list, read across every page (lesson 2026-11-02). */
-    all: <T = any>(kind: string) => allPages(async (page) => ok<T[]>("GET", `/${kind}?page=${page}`)), // eslint-disable-line @typescript-eslint/no-explicit-any
+    /**
+     * Every row of a paged tenant list, read across every page (lesson 2026-11-02); `q` narrows it as the list's
+     * search does, which differs by list: requisitions match a material or location ID, purchase orders a location's,
+     * production orders their output's.
+     */
+    all: <T = any>(kind: string, q = "") => allPages(async (page) => ok<T[]>("GET", `/${kind}?page=${page}${q ? `&q=${q}` : ""}`)), // eslint-disable-line @typescript-eslint/no-explicit-any
     /** The latest run's plan for one pair, with the run. */
     plan: async (material: string, location: string): Promise<MrpPlanView & { run: MrpLatestView["run"] }> => {
       const { run, plans } = await ok<MrpLatestView>("GET", `/mrp/runs/latest?material=${material}&location=${location}`);
@@ -250,3 +254,30 @@ export function journeyAccounts(baseUrl: string, adminPassword: string, prefix: 
   });
   return context;
 }
+
+/**
+ * The supply documents of one material at one location, read across every page: requisitions, purchase-order lines,
+ * production orders (by output), goods receipts and completions. A journey compares them after each step to prove no
+ * step leaves a duplicate planned or posted supply (E2E-002).
+ */
+export async function supplyOf(api: JourneyApi, material: string, location: string) {
+  const requisitions = (await api.all<{ id: string; material: string; location: string; status: string }>("purchase-requisitions", material))
+    .filter((row) => row.material === material && row.location === location);
+  const orders = (await api.all<{ id: string; location: string; lines: { line: number; material: string; received: string }[] }>("purchase-orders", location))
+    .filter((order) => order.location === location && order.lines.some((line) => line.material === material));
+  const productionOrders = (await api.all<{ id: string; output: string; location: string; status: string }>("production-orders", material))
+    .filter((order) => order.output === material && order.location === location);
+  const receipts = (await Promise.all(orders.map((order) => api.get<{ lines: { material: string }[] }[]>(`/goods-receipts?purchaseOrder=${order.id}`))))
+    .flat().filter((receipt) => receipt.lines.some((line) => line.material === material));
+  const completions = (await Promise.all(productionOrders.map((order) => api.get<unknown[]>(`/production-orders/${order.id}/completions`)))).flat();
+  return {
+    requisitions: requisitions.length,
+    purchaseOrderLines: orders.flatMap((order) => order.lines.filter((line) => line.material === material)).length,
+    productionOrders: productionOrders.length,
+    receipts: receipts.length,
+    completions: completions.length,
+  };
+}
+
+/** How far a day's projected balance falls below its safety target, as MRP's `safetyGap` derives it (MRP-043). */
+export const safetyGap = ({ safetyTarget, projectedBefore }: { safetyTarget: string; projectedBefore: string }) => Math.max(0, Number(safetyTarget) - Number(projectedBefore));
