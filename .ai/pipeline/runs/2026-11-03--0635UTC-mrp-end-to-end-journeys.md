@@ -83,3 +83,12 @@ Steps 1.4–1.7 are disjoint files, so three cezar workers run them in parallel,
 - `-t` is a regex: escape `(`, or match on `#369`.
 
 **Report** (`cez task report`): status, what each test asserts per catalogue Then clause, any bug filed, the commands run with their pass counts, each file's local duration, and the commit SHA.
+
+## Log
+
+- 06:37 UTC: steps 1.1–1.2 pushed by the first session (128a081d). It died at 07:00 with the API unreachable, leaving 1.3 as an unpushed cezar autosave.
+- 08:15 UTC: resumed in a new session. The autosave was folded into 2a5570df. E2E-003 now opens the closed Why this BOM, and E2E-016 measures the rise's gap on the carried balance. `supplyOf` searches each list by its own `q` fields (see the spec's Implementation notes).
+- 08:20 UTC: E2E-002 exposed #369, filed as a bug against E17-S03. Its clause is an `it.fails` test; checked to fail on I's `provisional-demand` action, not on setup.
+- 08:25–08:50 UTC: workers 1476767d (e2e-corrections, 6a573f01), 744c5cb6 (E2E-010 and the realistic run, 562c34b9) and 171eaa1e (e2e-automatic, cb9e4ce9). Each branch was reviewed, merged with `--no-ff`, and re-run by the lead on a fresh server: 5/5, 5/5 + 9/9, and 3 + 1 expected fail, followed by `mrp-automatic-api.test.ts` 7/7.
+- Realistic screen run (local): run ID shown 783 ms after the click, `/up` answered at 186 ms (the worker measured 679–792 ms and 183–205 ms). The API run took 118–131 ms.
+- Known exception: each file's UX-023 count test fails alone under `-t` by design, since it counts the file's journeys.

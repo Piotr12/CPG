@@ -1,6 +1,6 @@
 # MRP end-to-end journeys: twelve cross-domain journeys run from demand to MRP to documents to postings, through the screens and the bearer API, and core planning needs no price or accounting field
 
-**Status:** in progress
+**Status:** implemented
 **Created:** 2026-11-03 06:26 UTC
 **Issue:** #291 (E20-S02, epic #272) · **Depends on:** every slice 3 MRP story (E14-S01 … E19-S03, #273–#289), the BOM import (#27), the stock import (#81), the stock and completion reversals (#91, #92), all closed · **Related:** the slice 3 closing pass (E20-S03, #292), the E2E-010 Prod half (#189), UX-023's navigation half (#192) · **Design authority:** `.ai/specs/product-brief.md` ("Key flows", R07, R09, R10, D01, D08, N01, N02), `research/CPG-prd001.pdf` §03 conceptual flow, §04, §07, `research/CPG-acceptance.md` E2E-001, 002, 003, 005, 007, 008, 010, 012, 015, 016, 019, 021 and UX-023
 
@@ -198,3 +198,13 @@ One phase, shipped as one implementation PR: the helper, the four journey files,
 8. **UX-023's file-level assertion.** Each journey file ends with a test that its checked-request count is above zero and that no finance key was met.
 9. **Full order on one server.** Run every integration file in one pass on a fresh standalone server (lesson 2026-10-24), and record the new files' times. Record each Prod list's total and its headroom below 100 (Risks, "Prod growth"). Watch CI's shard times on the PR, and apply Q10 if a shard crosses 14 min.
 10. **Catalogue.** Promote the twelve rows (Q12), matching every Then clause to an `expect`. Update E2E-010's Evidence and the "Last updated" paragraph. Run `npm test` (catalogue and filename checks), lint, typecheck, `npm run test:coverage` and build.
+
+## Implementation notes
+
+Implemented on #366.
+
+- **A defect, #369 (Q11).** In E2E-002 and E2E-021, the rerun after R's receipt keeps I provisional (`provisional-demand`). F, its only demand, is short of I itself, so the chain never becomes executable through MRP. The clause is an `it.fails` test in each file, named after #369. The journey makes I through a production order entered directly, then checks that the next run makes F executable, and that no step adds a duplicate document. Both rows stay Partially verified, naming #369.
+- **E2E-016's gap at the rise.** A bucket's `projectedBefore` excludes the plan's proposals, so `safetyGap(bucket)` at the rise is 26 (30 − 4). The test measures the gap the spec means on the balance the plan carries in: the day before's `projectedAfter`, 10, gives 20. The proposals (6, 20 and 20, summing to 46) are as the spec says.
+- **List searches.** `supplyOf` reads each list with the `q` its search matches. Requisitions and production orders are searched by material, and purchase orders by location: the production-order search has no location field, so a location `q` silently dropped F's order.
+- **`-t` and the UX-023 tests.** Every journey test passes alone with `-t`. Each file's UX-023 test counts what that file's journeys checked, so it fails alone by design.
+- **Delivery.** Steps 1.4–1.7 ran as three parallel workers, one file group each. The brief is in the execution plan's "Delivery" section.
