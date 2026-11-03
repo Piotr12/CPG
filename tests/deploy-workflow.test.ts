@@ -36,10 +36,8 @@ test("the first step of the first job refuses the ref, before anything is checke
   assert.ok(firstJob.steps?.slice(1).some((step) => step.uses?.startsWith("actions/checkout@")));
 });
 
-test("every job reaches the deploy only through the first job", () => {
-  // Each job but the first needs exactly one earlier job, so a failed first job stops them all.
-  assert.equal(deploy.jobs.ci.needs, "spec-copies");
-  assert.equal(deploy.jobs.deploy.needs, "ci");
+test("no other job starts beside the first one", () => {
+  // ci needs spec-copies and deploy needs ci (tests/spec-copies-workflows.test.ts), so a failed first job stops both.
   assert.deepEqual(Object.keys(deploy.jobs), ["spec-copies", "ci", "deploy"]);
 });
 
@@ -59,7 +57,7 @@ test("only main queues as deploy-production, so a refused run can't cancel a mai
 test("no script pastes the ref in with an expression", () => {
   assert.match(refusal?.run ?? "", /"\$GITHUB_REF"/);
   for (const job of Object.values(deploy.jobs)) {
-    for (const step of job.steps ?? []) assert.doesNotMatch(step.run ?? "", /\$\{\{\s*github\.(ref|head_ref)/);
+    for (const step of job.steps ?? []) assert.doesNotMatch(step.run ?? "", /\$\{\{[^}]*\bref\b/);
   }
 });
 

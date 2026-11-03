@@ -21,7 +21,7 @@ Each answer is the most reversible one. They are posted on the PR and on #360 fo
 | # | Question | Applied default | Why |
 | --- | --- | --- | --- |
 | Q1 | Refuse other refs, or allow them on purpose (#360's two options)? | **Refuse.** Only `refs/heads/main` deploys. | No run log, lesson or doc asks for a branch deploy. Rolling back is a revert on `main` (or `kamal rollback` from a workstation), and both leave `main` matching production. Shipping a branch makes production differ from `main` until the next push overwrites it, which nobody would see. Allowing it later is deleting two conditions. |
-| Q2 | Fail the run, or skip its jobs? | **Fail.** The first step of the first job, `spec-copies`, exits 1 with `::error::Deploy ships main only. This run was started on <ref>; start it on main.` It runs before checkout, so the branch is never checked out. `ci` needs `spec-copies`, and `deploy` needs `ci`, so neither starts. | A run whose jobs are all skipped shows as green, and whoever started it may believe it deployed. A red run with the reason in its annotation tells them. Failing first also spends no CI minutes and no place in the `deploy-production` queue beyond a few seconds. |
+| Q2 | Fail the run, or skip its jobs? | **Fail.** The first step of the first job, `spec-copies`, exits 1 with `::error::Deploy ships main only. This run was started on <ref>; start it on main.` It runs before checkout, so the branch is never checked out. `ci` needs `spec-copies`, and `deploy` needs `ci`, so neither starts. | A run whose jobs are all skipped shows as green, and whoever started it may believe it deployed. A red run with the reason in its annotation tells them. Failing first also spends no CI minutes. |
 | Q3 | Also guard the `deploy` job itself? | **Yes:** `if: github.ref == 'refs/heads/main'` on `deploy`. | The step above stops the run only while every path to `deploy` goes through `spec-copies`. The job that holds the secrets should state the rule itself, so a later change to `needs` can't reopen it. Without a status function a job-level `if` keeps the implied `success()`, so it still waits for `ci`. |
 | Q4 | Remove `workflow_dispatch` instead? | **No.** | `spec-copies.yml` starts Deploy on `main` through it (#351), and it is how to re-deploy `main` by hand. |
 | Q5 | How does the step read the ref? | From the `GITHUB_REF` environment variable, not a `${{ github.ref }}` expression in the script. | A branch name may hold characters the shell would run. An environment variable is data, while an expression is pasted into the script before bash reads it. |
@@ -80,6 +80,8 @@ Takeaway: on `main` nothing changes but one shell step of a few milliseconds. On
 - Undo: delete the step and the `if`.
 
 ## Out of scope
+
+- A branch's own copy of `deploy.yml`. `workflow_dispatch` runs the workflow file stored on the ref it starts, so a branch cut before this change, or one that edits the step out, is not refused. The guard prevents accidents, not a deliberate deploy by someone who can push. Binding the deploy secrets to a `production` environment that only `main` may use closes that, as #368 tracks.
 
 - Branch protection, environments with required reviewers, or any other GitHub setting.
 - `ci.yml`, `spec-copies.yml` and the Kamal configuration.
