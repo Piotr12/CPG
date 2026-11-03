@@ -37,7 +37,7 @@ Branch protection, reviewers or timers on the environment, `ci.yml`, `spec-copie
 - The environment only protects the secrets once the repository copies are deleted. Until then a branch's copy can still read them, as today.
 
 ## Progress
-PR: (pending)
+PR: #372
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
