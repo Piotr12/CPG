@@ -105,11 +105,19 @@ describe("planning journeys: levels, BOM choice and safety targets", () => {
 
   // E2E-002's "dependencies fulfilled in sequence": with R on hand, run 2 should make I executable. It keeps I
   // provisional (`provisional-demand`) because F, its only demand, is short of I itself (#369). Flips red when fixed.
-  it.fails("E2E-002 (#369): once R is on hand, the rerun makes I's production order executable", () => withinOneDay(async () => {
-    const { iBom, run2 } = await threeLevels("E2E-002 #369", false);
-    expect(run2.I.provisional).toEqual([]);
-    expect(run2.I.proposals).toEqual([expect.objectContaining({ kind: "production-order", quantity: "10.000000", bom: iBom, bomRevision: 1, executable: true })]);
-  }));
+  it.fails("E2E-002 (#369): once R is on hand, the rerun makes I's production order executable", async () => {
+    // Only the clause below may fail: a setup that breaks returns instead, which `it.fails` reports as a failure.
+    let plan: MrpPlanView;
+    let iBom: string;
+    try {
+      ({ iBom, run2: { I: plan } } = await withinOneDay(() => threeLevels("E2E-002 #369", false)));
+    } catch (error) {
+      process.stdout.write(`E2E-002 (#369)'s setup failed, so the test reports a failure: ${String(error)}\n`);
+      return;
+    }
+    expect(plan.provisional).toEqual([]);
+    expect(plan.proposals).toEqual([expect.objectContaining({ kind: "production-order", quantity: "10.000000", bom: iBom, bomRevision: 1, executable: true })]);
+  });
 
   it("E2E-003: with only B's component on hand, MRP pins BOM B, explains A's exact shortage, and the completion posts B's output and consumption", () => withinOneDay(async () => {
     const location = (await masters.post("/locations", { name: "e2epl E2E-003 plant" })).id as string;

@@ -84,6 +84,9 @@ describe("supply-chain journeys from demand to shipment", () => {
     const fLedger = (await user.stock(finished, location)).movements;
     expect(fLedger.map(({ type, quantity }) => [type, quantity])).toEqual([["goods-issue", "-10.000000"], ["production-completion", "10.000000"]]);
     expect(fLedger[1].postingId).toBe(rLedger[0].postingId);
+    const fromOrder = { id: completion.id, document: { type: "production-order", id: productionOrder.id } };
+    expect([rLedger[0].source, fLedger[1].source]).toEqual([expect.objectContaining(fromOrder), expect.objectContaining(fromOrder)]);
+    expect(fLedger[0].source).toMatchObject({ id: issue.id, document: { type: "shipment", id: shipment.id } });
     for (const movement of [...rLedger, ...fLedger]) expect(movement).toMatchObject({ actorUsername: accounts.username, channel: "api" });
 
     // And in the tenant audit, by the user: the requisition accepted on the screen, the postings over the API.

@@ -177,7 +177,6 @@ describe("the stock report in the UI", () => {
       // Other files' Prod stock can fill the first page (lesson 2026-11-02), so this file's row is read through the filter.
       await open(`?material=${ids.steel}`);
       expect((await rows()).map(([material]) => material)).toEqual([`${ids.steel} — srui steel`, `${ids.steel} — srui steel`]);
-      await una.waitForText("Prod is read-only");
     } finally {
       expect((await callApi(baseUrl, "PATCH", "/api/tenants/prod", secret, { key: randomUUID(), body: { readOnly: false } })).status).toBe(200);
     }

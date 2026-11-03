@@ -138,7 +138,7 @@ describe("the realistic Test dataset, written by an API reset", () => {
   });
 
   // Before the tests that add documents, so the screen plans the realistic dataset as the reset wrote it (spec Q9, D01).
-  it("runs MRP on the screen over the realistic dataset within tolerance while /up answers, and opens the first pair's days (E14-S02, D01)", async () => {
+  it("runs MRP on the screen over the realistic dataset within tolerance, /up answering before the run card updates, and opens the first pair's days (E14-S02, D01)", async () => {
     await openMrp(admin, baseUrl, "test");
     expect(await admin.evaluate<number[]>("[innerWidth, innerHeight]")).toEqual([1280, 800]);
     const before = await admin.evaluate<string>(`${shownOnScreen(RUN_ID)}?.textContent ?? ""`);

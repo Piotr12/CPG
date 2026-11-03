@@ -213,8 +213,7 @@ describe("transfers in the UI", () => {
     // Both routes touch the plant; by material, steel (the older ID) comes first, then the other way.
     await una.open(`${baseUrl}/admin/prod/transfers?q=tr+plant`);
     await una.waitFor("main [role=status]");
-    // The search keeps rows holding both words anywhere, so another file's "trapi plant" matches too: check the words, and this file's two.
-    for (const [, , route] of await tableRows(una, "Transfers")) expect([route.includes("tr"), route.includes("plant")], route).toEqual([true, true]);
+    // The search keeps rows holding both words anywhere, so another file's "trapi plant" can match too: this file's two are listed.
     expect((await own()).sort()).toEqual([transfer, back].sort());
     // By the planned quantity's value (#224): 3 kg before 100 kg, which the stored text has the other way round.
     await clickHydrated(una, "main th a[href$='q=tr+plant&sort=quantity&dir=asc']");

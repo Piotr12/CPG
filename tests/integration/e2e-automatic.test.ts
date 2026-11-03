@@ -206,13 +206,25 @@ describe("automatic journeys: a falling forecast and a provisional hierarchy", (
   // E2E-021's "rerun after dependable supply permits higher-level executable orders": with R on hand, automatic run 2
   // should create I's production order. It keeps I provisional (`provisional-demand`) because F, its only demand, is
   // short of I itself (#369). Flips red when fixed.
-  it.fails("E2E-021 (#369): once R is on hand, the automatic rerun creates I's executable production order", () => withinOneDay(async () => {
-    const { intermediate, location, iBom, receiveAndRerun } = await hierarchy("E2E-021 #369", false);
-    const run2 = await receiveAndRerun();
+  it.fails("E2E-021 (#369): once R is on hand, the automatic rerun creates I's executable production order", async () => {
+    // Only the clauses below may fail: a setup that breaks returns instead, which `it.fails` reports as a failure.
+    let run2: Awaited<ReturnType<Awaited<ReturnType<typeof hierarchy>>["receiveAndRerun"]>>;
+    let iBom: string;
+    let iOrders: number;
+    try {
+      ({ run2, iBom, iOrders } = await withinOneDay(async () => {
+        const chain = await hierarchy("E2E-021 #369", false);
+        const plans = await chain.receiveAndRerun();
+        return { run2: plans, iBom: chain.iBom, iOrders: (await supplyOf(user, chain.intermediate, chain.location)).productionOrders };
+      }));
+    } catch (error) {
+      process.stdout.write(`E2E-021 (#369)'s setup failed, so the test reports a failure: ${String(error)}\n`);
+      return;
+    }
     expect(run2.I.provisional).toEqual([]);
     expect(run2.I.proposals).toEqual([expect.objectContaining({ kind: "production-order", quantity: "10.000000", bom: iBom, bomRevision: 1, executable: true, document: expect.any(String) })]);
-    expect((await supplyOf(user, intermediate, location)).productionOrders).toBe(1);
-  }));
+    expect(iOrders).toBe(1);
+  });
 
   it("UX-023: every request and answer of these journeys carried no price, cost, currency, invoice, tax, payment or accounting field", () => {
     // journeyApi failed any journey whose request or answer had one; this proves the journeys went through it.

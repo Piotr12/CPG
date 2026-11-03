@@ -14,6 +14,9 @@ import { createToken, openTokens } from "./tokens";
 
 export type Tenant = "prod" | "test";
 
+/** What a read gives when the journey names no type: the untyped JSON `json()` gives every integration test. */
+type Json = ReturnType<typeof json>;
+
 /** A day `days` after the server's UTC today, as MRP plans from it. */
 export const day = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
 
@@ -100,15 +103,15 @@ export function journeyApi(baseUrl: string, token: string | (() => string), tena
     state,
     call,
     generation,
-    get: <T = any>(path: string) => ok<T>("GET", path), // eslint-disable-line @typescript-eslint/no-explicit-any
-    post: <T = any>(path: string, body: unknown = {}) => ok<T>("POST", path, body), // eslint-disable-line @typescript-eslint/no-explicit-any
-    patch: <T = any>(path: string, body: unknown) => ok<T>("PATCH", path, body), // eslint-disable-line @typescript-eslint/no-explicit-any
+    get: <T = Json>(path: string) => ok<T>("GET", path),
+    post: <T = Json>(path: string, body: unknown = {}) => ok<T>("POST", path, body),
+    patch: <T = Json>(path: string, body: unknown) => ok<T>("PATCH", path, body),
     /**
      * Every row of a paged tenant list, read across every page (lesson 2026-11-02); `q` narrows it as the list's
      * search does, which differs by list: requisitions match a material or location ID, purchase orders a location's,
      * production orders their output's.
      */
-    all: <T = any>(kind: string, q = "") => allPages(async (page) => ok<T[]>("GET", `/${kind}?page=${page}${q ? `&q=${q}` : ""}`)), // eslint-disable-line @typescript-eslint/no-explicit-any
+    all: <T = Json>(kind: string, q = "") => allPages(async (page) => ok<T[]>("GET", `/${kind}?page=${page}${q ? `&q=${q}` : ""}`)),
     /** The latest run's plan for one pair, with the run. */
     plan: async (material: string, location: string): Promise<MrpPlanView & { run: MrpLatestView["run"] }> => {
       const { run, plans } = await ok<MrpLatestView>("GET", `/mrp/runs/latest?material=${material}&location=${location}`);
@@ -118,7 +121,7 @@ export function journeyApi(baseUrl: string, token: string | (() => string), tena
     /** Runs MRP through the API (manual unless `mode` says otherwise) and returns its answer. */
     run: (mode: "manual" | "automatic" = "manual") => ok<{ id: string; mode: string; creation: unknown; documents?: { proposal: string; kind: string; id: string }[] }>("POST", "/mrp/runs", { mode }),
     /** Accepts one proposal of a run through the API and returns the document it created. */
-    accept: async <T = any>(run: string, proposal: string) => (await ok<{ document: T }>("POST", `/mrp/runs/${run}/proposals/${proposal}/accept`, {})).document, // eslint-disable-line @typescript-eslint/no-explicit-any
+    accept: async <T = Json>(run: string, proposal: string) => (await ok<{ document: T }>("POST", `/mrp/runs/${run}/proposals/${proposal}/accept`, {})).document,
     /** A pair's physical balance and its newest page of movements. */
     stock: (material: string, location: string) =>
       ok<{ quantity: string; movementCount: number; movements: StockMovement[] }>("GET", `/stock?material=${material}&location=${location}`),
