@@ -5,8 +5,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# GitHub keeps one pending run per group and cancels the older one when another is queued. A run on a ref other
+# than main, which only fails below, gets a group of its own, so it can't cancel a main deploy waiting here (#360).
 concurrency:
-  group: deploy-production
+  group: ${{ github.ref == 'refs/heads/main' && 'deploy-production' || format('deploy-refused-{0}', github.run_id) }}
   cancel-in-progress: false
 
 permissions:
@@ -22,6 +24,14 @@ jobs:
     outputs:
       copies: ${{ steps.check.outputs.copies }}
     steps:
+      # A hand-started run (workflow_dispatch) may name any branch or tag. Only main deploys (#360). The ref is read
+      # from the environment, never pasted into the script by an expression: a branch name must not become shell code.
+      - name: Refuse a ref other than main
+        run: |
+          if [ "$GITHUB_REF" != refs/heads/main ]; then
+            echo "::error::Deploy ships main only. This run was started on $GITHUB_REF; start it on main."
+            exit 1
+          fi
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
@@ -41,6 +51,8 @@ jobs:
 
   deploy:
     needs: ci
+    # The job that holds the secrets states the rule itself, whatever later becomes of `needs` (#360).
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:

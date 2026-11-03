@@ -1,6 +1,6 @@
 # Deploy ships main only: a hand-started Deploy on any other ref fails at its first step
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-11-03 06:33 UTC
 **Issue:** #360 (follow-up of #351's spec, #359) · **Touches:** `.github/workflows/deploy.yml`, a new `tests/deploy-workflow.test.ts`, the Deployment bullet in AGENTS.md, CI/CD in `.ai/docs/engineering-standards.md`
 
@@ -92,10 +92,14 @@ One phase, one step.
 
 1. **The gate, its test and the docs.** Add the step, the `if` and the concurrency group to `deploy.yml`, add `tests/deploy-workflow.test.ts` as above, and update AGENTS.md and the engineering standards. Verify with `npm run lint`, `npm run typecheck`, `npm run test:coverage` (100%) and `npm run build`. Run the refusal step's test against the step with its `exit 1` line deleted, and check that it fails.
 
+## Implementation notes
+
+Implemented by the implementation PR for #360 (`.ai/pipeline/runs/2026-11-03--0636UTC-deploy-main-only.md`), as planned. The refusal test also covers `refs/heads/x/refs/heads/main` and an empty `GITHUB_REF`. Deleting the step's `exit 1`, the `deploy` job's `if`, or reading the ref through `${{ github.ref }}` each fails `tests/deploy-workflow.test.ts`. The first real refusal can only happen on GitHub: start Deploy by hand on a branch once after merge.
+
 ## Acceptance criteria
 
-- [ ] A Deploy started on any ref but `refs/heads/main` fails at its first step with an error naming the ref, and neither `ci` nor `deploy` runs (#360 AC1, the refusal option).
-- [ ] The `deploy` job runs only when `github.ref` is `refs/heads/main`.
-- [ ] A refused run never enters the `deploy-production` concurrency group, so it can't cancel a `main` run waiting there.
-- [ ] `tests/deploy-workflow.test.ts` pins all three, and runs the refusal step for `main`, other branches, a tag and a ref holding shell syntax (#360 AC2).
-- [ ] AGENTS.md and the engineering standards say Deploy ships `main` only.
+- [x] A Deploy started on any ref but `refs/heads/main` fails at its first step with an error naming the ref, and neither `ci` nor `deploy` runs (#360 AC1, the refusal option).
+- [x] The `deploy` job runs only when `github.ref` is `refs/heads/main`.
+- [x] A refused run never enters the `deploy-production` concurrency group, so it can't cancel a `main` run waiting there.
+- [x] `tests/deploy-workflow.test.ts` pins all three, and runs the refusal step for `main`, other branches, a tag and a ref holding shell syntax (#360 AC2).
+- [x] AGENTS.md and the engineering standards say Deploy ships `main` only.

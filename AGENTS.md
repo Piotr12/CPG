@@ -35,7 +35,7 @@ These are the project's architectural decisions. Follow them; do not introduce a
 - **Testing: Vitest** for unit tests (with React Testing Library + jsdom for components) and for integration tests, which run the app's production Docker image through **Testcontainers** and drive it with **agent-browser**. The rules are in [Testing](#testing--mandatory) below.
 - **Commands** (from the repo root): `npm run dev`, `npm run build`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:coverage`, `npm run test:integration`, `npm run db:migrate`, `npm run db:migration:create -- <name>`.
 - **CI:** `.github/workflows/ci.yml` runs lint, typecheck, unit tests with coverage, build and integration tests on every pull request. `deploy.yml` calls the same workflow, so nothing deploys unless it passes. A squash merge can re-add the active copy of a spec already in `.ai/specs/implemented/` or `archive/`: `spec-copies.yml` then deletes it on `main` and starts Deploy, which skips the commit that had it (#351).
-- **Deployment:** pushing to `main` deploys with Kamal from GitHub Actions. kamal-proxy only switches traffic once `/up` answers, and `/up` queries the database.
+- **Deployment:** pushing to `main` deploys with Kamal from GitHub Actions. Deploy ships `main` only: a run started by hand on any other branch or tag fails at its first step (#360). kamal-proxy only switches traffic once `/up` answers, and `/up` queries the database.
 
 ## Testing — mandatory
 

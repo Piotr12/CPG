@@ -308,7 +308,7 @@ tests/
 
 - `eslint.config.mjs` enforces the package layering, the ban on relative imports across packages and `@mikro-orm/*` outside `db`, `no-explicit-any` and `no-console` (except `info`/`warn`/`error`).
 - `vitest.config.mts` sets 100% coverage thresholds (lines, branches, functions, statements) over `packages/*/src`, `packages/*/scripts` and the root `scripts/`, so `npm run test:coverage` fails on any uncovered code.
-- `.github/workflows/ci.yml` runs lint, typecheck, unit tests with coverage, build and integration tests on every pull request, and `deploy.yml` runs the same workflow before deploying. `spec-copies.yml` deletes, on `main`, the active copy of a spec already implemented or archived, and Deploy skips a commit that holds one (#351).
+- `.github/workflows/ci.yml` runs lint, typecheck, unit tests with coverage, build and integration tests on every pull request, and `deploy.yml` runs the same workflow before deploying. `spec-copies.yml` deletes, on `main`, the active copy of a spec already implemented or archived, and Deploy skips a commit that holds one (#351). Deploy ships `main` only: a run started by hand on any other branch or tag fails at its first step (#360).
 - `AGENTS.md` makes reading this document part of the workflow, and its verification step runs lint, typecheck, tests with coverage, build, the touched integration files and `npm audit` triage, then checks the pull request's CI run (which runs the full integration suite).
 - Review uses the checklist in Section 1.
 
