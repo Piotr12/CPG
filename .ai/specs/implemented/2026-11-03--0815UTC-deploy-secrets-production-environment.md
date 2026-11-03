@@ -27,7 +27,7 @@ Each answer is the most reversible one. They are posted on the PR and on #368 fo
 | Q5 | "Allow administrators to bypass configured protection rules"? | **Leave GitHub's default.** | The owner is the repository's only admin and can change the settings anyway. GitHub documents the bypass for jobs waiting on a protection rule (reviewers, timers). |
 | Q6 | In which order do the settings and the merge happen? | 1. Create `production` with the `main` rule. 2. Add both secrets to it. 3. Merge the implementation PR. 4. Check that the `main` Deploy it starts passes and shows on the environment. 5. Delete the repository secrets. | Each step keeps deploys working. The job reads the environment's secrets as soon as it names `production`, and the repository's while they exist. Deleting the repository copies before step 4 would leave a failed deploy with no rollback but re-adding them. Merging before step 1 is harmless: GitHub creates a missing environment, with no rules, on the first run that names it. |
 | Q7 | Does the implementation PR close #368? | **No: `Refs #368`.** The owner closes #368 after step 5. | Merging can't delete the repository secrets. A closing keyword would close #368 with its second criterion still open. |
-| Q8 | What does the test pin? | `deploy`'s `environment` is `production`. And, across every workflow file, a job that reads a `secrets.*` value other than `GITHUB_TOKEN` declares `environment: production`, no job passes `secrets:` to a reusable workflow, and no workflow-level `env` reads a secret. | Moving a secret into the environment only protects it while every job that reads it names the environment. The rule covers future workflows too, so a new secret can't quietly go back to repository level. `GITHUB_TOKEN` is GitHub's per-run token, not a repository secret. |
+| Q8 | What does the test pin? | `deploy`'s `environment` is `production`. And, across every workflow file, a job that reads a `secrets.*` value other than `GITHUB_TOKEN` declares `environment: production`, no job passes `secrets:` to a reusable workflow or calls one from another repository, and nothing outside the jobs reads a secret. | Moving a secret into the environment only protects it while every job that reads it names the environment. The rule covers future workflows too, so a new secret can't quietly go back to repository level. `GITHUB_TOKEN` is GitHub's per-run token, not a repository secret. |
 | Q9 | Can a test check the repository settings? | **No.** The owner checks them once (step 4). | Unit tests run offline, and the settings change once, by hand. |
 
 ## 📝 Proposed Solution
@@ -35,11 +35,11 @@ Each answer is the most reversible one. They are posted on the PR and on #368 fo
 1. **`deploy.yml`, job `deploy`**: `environment: production`, beside `needs` and `if`, with a comment saying the secrets live there (#368).
 2. **`tests/deploy-workflow.test.ts`** gains:
    - `deploy.jobs.deploy.environment` is exactly `"production"`;
-   - for every file in `.github/workflows/`: every job whose definition reads `${{ secrets.<NAME> }}` with a name other than `GITHUB_TOKEN` has `environment: production`; no job has a `secrets` key; the workflow's top-level `env` reads no secret. A test also checks that the deploy job is among the jobs found, so the scan can't pass by finding nothing.
+   - for every file in `.github/workflows/`: every job whose definition reads `${{ secrets.<NAME> }}` with a name other than `GITHUB_TOKEN` has `environment: production`; no job has a `secrets` key or calls a workflow outside this repository (a `uses:` not starting with `./`, which could name `production` itself); nothing outside the jobs reads a secret. A test also checks that the deploy job is among the jobs found, so the scan can't pass by finding nothing.
 3. **Docs.** AGENTS.md, the Deployment bullet: replace "That holds for `main`'s `deploy.yml`, not for a branch's own edited or older copy, which #368 tracks." with "Its secrets live in the `production` environment, which only `main` may use, so a branch's own copy of `deploy.yml` can't reach them either (#368)." The same change goes in the CI/CD paragraph of `.ai/docs/engineering-standards.md`.
 4. **Owner steps** (repository settings, Q6), in the implementation PR's body as a checklist:
    1. Settings → Environments → New environment `production`. Deployment branches and tags: **Selected branches and tags**, add a **Branch** rule `main`. Or: `gh api -X PUT repos/Piotr12/CPG/environments/production -F 'deployment_branch_policy[protected_branches]=false' -F 'deployment_branch_policy[custom_branch_policies]=true'`, then `gh api -X POST repos/Piotr12/CPG/environments/production/deployment-branch-policies -f name=main -f type=branch`.
-   2. Add `SSH_PRIVATE_KEY` and `CPG_ADMIN_PASSWORD` to the environment, with the current values (`gh secret set <NAME> --env production`).
+   2. Add `SSH_PRIVATE_KEY` and `CPG_ADMIN_PASSWORD` to the environment, with the current values (`gh secret set <NAME> --env production`). GitHub never shows a stored secret's value, so take them from where the owner keeps them (the deploy key's private file, the password manager). If either is lost, this step becomes a rotation, which is out of scope.
    3. Merge the implementation PR.
    4. Check that the Deploy run on `main` passes and that the Environments page lists its deployment to `production`.
    5. Delete the repository secrets (`gh secret delete SSH_PRIVATE_KEY`, `gh secret delete CPG_ADMIN_PASSWORD`), and close #368.
@@ -69,6 +69,7 @@ Takeaway: once the repository copies are deleted, only a job on `main` that name
 ## 📝 Risks & Impact Review
 
 - The only workflow change is one key on `deploy`. Until step 5 the repository secrets still serve as a fallback, so no deploy can break before the owner has seen one pass through the environment. No app code, schema, API, UI or `BACKWARD_COMPATIBILITY.md` surface.
+- The rule ties the secrets to the ref `refs/heads/main`, not to reviewed code. `main` has no branch protection, so whoever can push can push an edited `deploy.yml` straight to `main`. Today that is the owner and the owner's agents, and direct pushes are allowed while the project bootstraps. #371 tracks protecting `main`.
 - Undo: re-add the repository secrets, then remove the `environment` line.
 
 ## Out of scope
@@ -87,7 +88,7 @@ One phase, one step. The owner steps are repository settings, outside the PR.
 
 ## Implementation notes
 
-Implemented by the implementation PR for #368 (`.ai/pipeline/runs/2026-11-03--0817UTC-deploy-secrets-production-environment.md`), as planned. The scan treats any `secrets` inside a `${{ }}` expression as a read, `toJSON(secrets)` and `secrets['X']` included, except `secrets.GITHUB_TOKEN`, and checks itself against made-up workflows. Deleting the `environment` line fails two tests, and a job in `ci.yml` that reads `secrets.SSH_PRIVATE_KEY` without the environment fails the scan. The two owner criteria below stay open until the repository settings change (spec step 4).
+Implemented by the implementation PR for #368 (`.ai/pipeline/runs/2026-11-03--0817UTC-deploy-secrets-production-environment.md`), as planned. The scan treats a string that holds an expression and names `secrets` anywhere as a read (`toJSON(secrets)`, `secrets['X']` and `format('}}', secrets.X)` included), except `secrets.GITHUB_TOKEN`. It also refuses a job that calls a workflow from another repository, which could name `production` itself, and it checks itself against made-up workflows. Deleting the `environment` line fails two tests, and a job in `ci.yml` that reads `secrets.SSH_PRIVATE_KEY` without the environment fails the scan. The two owner criteria below stay open until the repository settings change (spec step 4).
 
 ## Acceptance criteria
 

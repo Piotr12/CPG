@@ -62,9 +62,12 @@ test("the deploy job runs in the production environment, which holds the deploy 
 
 // Moving a secret into the environment keeps it from other refs only while every job that reads it names the
 // environment. GITHUB_TOKEN is GitHub's per-run token, not a repository secret.
+// A string holding any expression counts as a read when it names `secrets` anywhere: an expression's own end can't be
+// found reliably (`format('}}', secrets.X)`), and a false alarm only asks for a second look.
 function readsSecret(value: unknown): boolean {
-  const expressions = JSON.stringify(value ?? null).match(/\$\{\{.*?\}\}/g) ?? [];
-  return expressions.some((expression) => /\bsecrets\b(?!\s*\.\s*github_token\b)/i.test(expression));
+  if (typeof value === "string") return value.includes("${{") && /\bsecrets\b(?!\s*\.\s*github_token\b)/i.test(value);
+  if (typeof value !== "object" || value === null) return false;
+  return Object.values(value).some(readsSecret);
 }
 
 function secretViolations(file: string, workflow: Workflow): { violations: string[]; bound: string[] } {
@@ -74,6 +77,8 @@ function secretViolations(file: string, workflow: Workflow): { violations: strin
   if (readsSecret(rest)) violations.push(`${file}: reads a secret outside its jobs`);
   for (const [name, job] of Object.entries(jobs)) {
     if (job.secrets !== undefined) violations.push(`${file} ${name}: passes secrets to a reusable workflow`);
+    // A workflow from another repository, called here, could name production itself and read the secrets on main.
+    if (job.uses !== undefined && !job.uses.startsWith("./")) violations.push(`${file} ${name}: calls a workflow outside this repository`);
     if (!readsSecret(job)) continue;
     if (job.environment === "production") bound.push(`${file} ${name}`);
     else violations.push(`${file} ${name}: reads a secret without environment: production`);
@@ -94,7 +99,7 @@ describe("the secret scan", () => {
     ({ on: {}, concurrency: { group: "g" }, ...rest, jobs }) as Workflow;
   const step = (run: string): Step[] => [{ run }];
 
-  it.each(["${{ secrets.SSH_PRIVATE_KEY }}", "${{ secrets['SSH_PRIVATE_KEY'] }}", '${{ secrets["X"] }}', "${{ toJSON(secrets) }}", "${{secrets.github_tokens}}"])(
+  it.each(["${{ secrets.SSH_PRIVATE_KEY }}", "${{ secrets['SSH_PRIVATE_KEY'] }}", '${{ secrets["X"] }}', "${{ toJSON(secrets) }}", "${{secrets.github_tokens}}", "${{ format('}}', secrets.X) }}", "${{ secrets.GITHUB_TOKEN || SECRETS.X }}"])(
     "flags %s read without the environment",
     (expression) => {
       expect(secretViolations("w.yml", workflow({ build: { steps: step(`echo "${expression}"`) } })).violations).toEqual([
@@ -112,6 +117,20 @@ describe("the secret scan", () => {
     expect(secretViolations("w.yml", workflow({ a: { environment: "production", steps: read }, b: { environment: "staging", steps: read } }))).toEqual({
       violations: ["w.yml b: reads a secret without environment: production"],
       bound: ["w.yml a"],
+    });
+  });
+
+  it("flags a read anywhere in the job, not only in a step's script", () => {
+    const job = (extra: Partial<Job> & Record<string, unknown>) => secretViolations("w.yml", workflow({ build: extra as Job })).violations;
+    for (const extra of [{ env: { KEY: "${{ secrets.X }}" } }, { steps: [{ uses: "a/b@v1", with: { key: "${{ secrets.X }}" } }] }]) {
+      expect(job(extra)).toEqual(["w.yml build: reads a secret without environment: production"]);
+    }
+  });
+
+  it("flags a workflow called from another repository, and accepts one from this repository", () => {
+    expect(secretViolations("w.yml", workflow({ remote: { uses: "other/repo/.github/workflows/x.yml@v1" }, local: { uses: "./.github/workflows/ci.yml" } }))).toEqual({
+      violations: ["w.yml remote: calls a workflow outside this repository"],
+      bound: [],
     });
   });
 
