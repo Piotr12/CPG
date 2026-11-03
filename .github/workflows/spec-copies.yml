@@ -1,0 +1,47 @@
+name: Spec copies
+
+# A spec PR's squash merge can put back the active copy of a spec that its implementation PR already moved to
+# .ai/specs/implemented/, and the two PRs' green runs can't see each other's merge (#351). On every push to main this
+# deletes such a copy, commits the deletion to main and starts Deploy, which skips the commit that had it
+# (deploy.yml, the spec-copies job). It runs apart from Deploy's queue, so the cleanup doesn't wait for a deploy.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write # push the cleanup commit to main
+  actions: write # start Deploy: a push made with GITHUB_TOKEN starts no workflow run
+
+concurrency:
+  group: spec-copies
+  cancel-in-progress: false
+
+jobs:
+  delete:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      # When main has moved on, the newer commit's own run deletes the copies. A push refused while main is still
+      # at this commit (a branch protection rule, say), or a main it can't read, fails the run.
+      - name: Delete the active copy of specs already implemented or archived
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          removed="$(node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/delete-spec-copies.ts .ai/specs)"
+          if [ -z "$removed" ]; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --quiet -m "docs(specs): delete the active copy of specs already implemented or archived (#351)" -m "$removed" -- .ai/specs
+          if ! git push origin HEAD:refs/heads/main; then
+            head="$(git ls-remote --exit-code origin refs/heads/main | cut -f1)"
+            [ -n "$head" ] && [ "$head" != "$GITHUB_SHA" ] || exit 1
+            echo "main moved on; its own spec-copies run deletes the copies."
+            exit 0
+          fi
+          echo "Pushed $(git rev-parse HEAD) to main; starting Deploy."
+          gh workflow run deploy.yml --ref main

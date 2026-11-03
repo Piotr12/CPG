@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import { test } from "vitest";
+import { activeCopies, isValidName } from "../scripts/spec-copies";
 
 const repoRoot = join(import.meta.dirname, "..");
 const folders = ["specs", "runs", "lessons"].map((name) => join(repoRoot, ".ai", name));
@@ -14,40 +15,11 @@ const pipelineRuns = join(repoRoot, ".ai", "pipeline", "runs");
 // om-backlog's backlog, spec evidence (assets/) and synthetic-user research (research/).
 const PIPELINE_FILES = /^\.ai\/specs\/(?:(?:product-brief|backlog)\.md|(?:assets|research)\/.+)$/;
 
-const NAME = /^(\d{4})-(\d{2})-(\d{2})--(\d{2})(\d{2})UTC-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/;
-
 function listFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
     entry.isDirectory() ? listFiles(join(dir, entry.name)) : [join(dir, entry.name)],
   );
 }
-
-// The regex only checks shape; this rejects e.g. 2026-02-30 or 2460UTC.
-function isRealTimestamp([, year, month, day, hour, minute]: RegExpExecArray): boolean {
-  const date = new Date(Date.UTC(+year, +month - 1, +day, +hour, +minute));
-  return (
-    date.getUTCFullYear() === +year &&
-    date.getUTCMonth() === +month - 1 &&
-    date.getUTCDate() === +day &&
-    date.getUTCHours() === +hour &&
-    date.getUTCMinutes() === +minute
-  );
-}
-
-function isValidName(fileName: string): boolean {
-  const match = NAME.exec(fileName);
-  return match !== null && isRealTimestamp(match);
-}
-
-test("the name check accepts the new format and rejects the old one", () => {
-  assert.ok(isValidName("2026-10-17--1432UTC-user-login.md"));
-  assert.ok(isValidName("2026-10-17--0005UTC-user-login-2.md"));
-  assert.ok(!isValidName("2026-10-17-user-login.md"));
-  assert.ok(!isValidName("2026-10-17--1432-user-login.md"));
-  assert.ok(!isValidName("2026-10-17--2460UTC-user-login.md"));
-  assert.ok(!isValidName("2026-02-30--1432UTC-user-login.md"));
-  assert.ok(!isValidName("2026-10-17--1432UTC-User_Login.md"));
-});
 
 function isExempt(path: string): boolean {
   return path.endsWith("/README.md") || PIPELINE_FILES.test(path);
@@ -91,13 +63,11 @@ test(".ai/pipeline/runs/ entries are named YYYY-MM-DD--HHMMUTC-slug", () => {
   );
 });
 
-// A spec lives in one place: `specs/` while active, then `implemented/` or `archive/`. Stacking an
-// implementation PR on its squash-merged spec PR left #273's spec in both (#274).
+// A spec lives in one place: `specs/` while active, then `implemented/` or `archive/`. A spec PR's squash merge can
+// re-add the active copy after its implementation PR moved it (#274, #351). On main, spec-copies.yml deletes such a
+// copy with the same rule (scripts/spec-copies.ts); here the PR's merge with main must not hold one.
 test("a spec is never active and implemented or archived at once", () => {
-  const specs = join(repoRoot, ".ai", "specs");
-  const names = (folder: string) => readdirSync(join(specs, folder)).filter((name) => isValidName(name));
-  const active = new Set(names("."));
-  const twice = ["implemented", "archive"].flatMap((folder) => names(folder).filter((name) => active.has(name)).map((name) => `${folder}/${name}`));
+  const twice = activeCopies(join(repoRoot, ".ai", "specs")).map((name) => `.ai/specs/${name}`);
 
   assert.deepEqual(twice, [], `Delete the active copy of these specs from .ai/specs/:\n${twice.join("\n")}`);
 });

@@ -9,9 +9,34 @@ concurrency:
   group: deploy-production
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
+  # A commit that holds the active copy of a spec already implemented or archived fails tests/ai-filenames.test.ts.
+  # spec-copies.yml deletes that copy on main and starts this workflow again, so this run skips CI and the deploy
+  # (#351). The deletion here stays on this job's own checkout.
+  spec-copies:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      copies: ${{ steps.check.outputs.copies }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - id: check
+        run: |
+          set -euo pipefail
+          copies="$(node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/delete-spec-copies.ts .ai/specs | tr '\n' ' ')"
+          echo "copies=$copies" >> "$GITHUB_OUTPUT"
+          if [ -n "$copies" ]; then echo "Skipping CI and the deploy: spec-copies.yml deletes $copies"; fi
+
   # The same checks as on pull requests: lint, typecheck, unit tests, build, integration tests.
   ci:
+    needs: spec-copies
+    if: needs.spec-copies.outputs.copies == ''
     uses: ./.github/workflows/ci.yml
 
   deploy:
