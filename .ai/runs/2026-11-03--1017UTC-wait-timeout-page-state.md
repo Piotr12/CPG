@@ -22,6 +22,12 @@
 - 11:21 Implemented; unit tests for the formatter and for the in-page script (jsdom, with a `hidden`-aware `innerText` stub, since jsdom has none).
 - 11:55 Real-browser check: a wait for `main table` on `/admin/prod/audit` from a signed-out session now ends with `The page http://127.0.0.1:3473/login (complete, title "Sign in · Caveman Planning Good", 0 Suspense boundaries still loading, 0 streamed parts not shown yet) reads: "Sign in to CPG Use your CPG account. Username Password Sign in"`.
 
+- 12:40 Independent review (fresh agent) requested changes; all applied:
+  - major: the shown `main` was picked with `!closest("[hidden]")`, but Next.js keeps earlier pages mounted with `display: none` (lesson 2026-10-23), so after a client navigation the error could quote the page left behind. Now `checkVisibility()`; the test's earlier page is `display: none`.
+  - minor: the page read had no limit, and a wedged agent-browser (up to 30 s) would let the test's 60 s limit swallow the wait's error. Now capped at 5 s (`no answer in 5000 ms`), tested.
+  - minor: a boundary whose server render failed keeps its `B:` template with `data-dgst`; now counted as `failed`, not loading.
+  - nits: null-safe catch, literal URL/ready-state assertions, shorter lesson. Declined: "after 25000ms" stays the wait's timeout, not the elapsed time including the ≤5 s read.
+
 ## Changes
 
 - `tests/integration/browser.ts`: `PAGE_STATE`, `waitTimedOut`; `waitUntil` throws `waitTimedOut`'s error (same first line as before, the page's state on the second, same `cause`).
@@ -34,7 +40,8 @@
 - `npx vitest run tests/` ✅ 29 files, 497 tests.
 - `npm run test:coverage`: 675 of 678 files passed; 8 tests in 3 files failed on timeouts while the machine ran at load average ~10.5 (other sessions): `mrp-run-timing.test.ts` (39 s against a 1.5 s bound), `seed-demo-data.test.ts` and `test-reset.service.test.ts` (realistic two-year dataset, 300 s limit). This change touches no package code; the same tests passed in CI on the base commit `c3325d75` (Deploy run, 2026-11-03 10:12 UTC). Run alone, `seed-demo-data` passed and one `test-reset` test still timed out (867 s, with the integration run beside it). CI is the verdict for these.
 - `npm run test:integration -- tests/integration/audit-history.test.ts` against a local standalone server (no Docker on this machine): ✅ 9/9.
-- Forced timeout on the real app: the error names the sign-in redirect (above).
+- Forced timeout on the real app: the error names the sign-in redirect (above); re-checked after the review fixes (`checkVisibility()` in Chrome).
+- PR #374 CI on the first commit: all 12 checks green (lint, typecheck, build, unit shards, timing, 100% coverage, 4 integration shards).
 
 ## Follow-ups
 

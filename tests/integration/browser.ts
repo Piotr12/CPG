@@ -54,6 +54,11 @@ const checkInPage = (expression: string, slice: number) => `new Promise((resolve
 
 /** How much of the page's text a timed-out wait quotes. */
 const PAGE_TEXT_CHARS = 400;
+/**
+ * How long a timed-out wait gives the page to describe itself. A wedged page can keep agent-browser from
+ * answering for up to 30 s, and the test's own 60 s limit would then report neither the wait nor the page.
+ */
+const PAGE_STATE_TIMEOUT_MS = 5_000;
 
 /** What a page showed when a wait gave up: the result of `PAGE_STATE`. */
 export interface PageState {
@@ -62,20 +67,26 @@ export interface PageState {
   title: string;
   /** Suspense boundaries still showing their fallback: React keeps a `<template id="B:…">` in each. */
   pending: number;
+  /** Suspense boundaries whose server render failed: React marks their template `data-dgst`. */
+  failed: number;
   /** Streamed parts React has not revealed yet: each waits in a `<div hidden id="S:…">`. */
   staged: number;
-  /** The start of the shown `main`'s visible text (the body's when no `main` is shown), whitespace collapsed. */
+  /**
+   * The start of the shown `main`'s visible text, whitespace collapsed: the body's when no `main` is shown.
+   * Next.js keeps earlier pages mounted with `display: none`, and streams parts into a `hidden` div first.
+   */
   text: string;
 }
 
 /** A script that reads the page's `PageState`. */
 export const PAGE_STATE = `(() => {
-  const shown = [...document.querySelectorAll("main")].find((main) => !main.closest("[hidden]")) ?? document.body;
+  const shown = [...document.querySelectorAll("main")].find((main) => main.checkVisibility()) ?? document.body;
   return {
     url: location.href,
     readyState: document.readyState,
     title: document.title,
-    pending: document.querySelectorAll('template[id^="B:"]').length,
+    pending: document.querySelectorAll('template[id^="B:"]:not([data-dgst])').length,
+    failed: document.querySelectorAll('template[id^="B:"][data-dgst]').length,
     staged: document.querySelectorAll('div[hidden][id^="S:"]').length,
     text: (shown?.innerText ?? "").replace(/\\s+/g, " ").trim().slice(0, ${PAGE_TEXT_CHARS}),
   };
@@ -84,16 +95,19 @@ export const PAGE_STATE = `(() => {
 /**
  * The error of a wait for `expression` that gave up, saying what the page showed then: whether it was
  * still loading or streaming, showed an error, or had gone somewhere else (a sign-in redirect). A
- * timeout that named only its condition left a one-off failure nothing to go on (#373).
+ * timeout that named only its condition left a one-off failure nothing to go on (#373). The page gets
+ * `readFor` ms to answer.
  */
-export async function waitTimedOut(page: Pick<Browser, "evaluate">, expression: string, cause: unknown) {
+export async function waitTimedOut(page: Pick<Browser, "evaluate">, expression: string, cause: unknown, readFor = PAGE_STATE_TIMEOUT_MS) {
   let shows: string;
   try {
-    const { url, readyState, title, pending, staged, text } = await page.evaluate<PageState>(PAGE_STATE);
-    shows = `The page ${url} (${readyState}, title ${JSON.stringify(title)}, ${pending} Suspense boundaries still loading, ${staged} streamed parts not shown yet) reads: ${JSON.stringify(text)}`;
+    const noAnswer = sleep(readFor, undefined, { ref: false }).then(() => Promise.reject(new Error(`no answer in ${readFor} ms`)));
+    const { url, readyState, title, pending, failed, staged, text } = await Promise.race([page.evaluate<PageState>(PAGE_STATE), noAnswer]);
+    shows = `The page ${url} (${readyState}, title ${JSON.stringify(title)}, ${pending} Suspense boundaries still loading, ${failed} failed, ${staged} streamed parts not shown yet) reads: ${JSON.stringify(text)}`;
   } catch (error) {
     // agent-browser's answer is on its output; the command line it failed with repeats the whole script.
-    const answer = (error as { stderr?: string; stdout?: string }).stderr?.trim() || (error as { stdout?: string }).stdout?.trim();
+    const output = error as { stderr?: string; stdout?: string } | null | undefined;
+    const answer = output?.stderr?.trim() || output?.stdout?.trim();
     shows = `The page could not be read: ${answer || String(error)}`;
   }
   return new Error(`Wait timed out after ${WAIT_TIMEOUT_MS}ms for ${expression}\n${shows}`, { cause });

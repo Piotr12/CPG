@@ -8,48 +8,59 @@ import { PAGE_STATE, waitTimedOut, type PageState } from "./integration/browser"
 const readPage = () => (0, eval)(PAGE_STATE) as PageState;
 
 describe("PAGE_STATE", () => {
+  // jsdom has no layout, so no `innerText` or `checkVisibility`. As in a browser, an element is not rendered
+  // when it or an ancestor is `hidden` or `display: none`, and `innerText` leaves such elements out.
+  const NOT_RENDERED = '[hidden], [style*="display: none"]';
   beforeEach(() => {
-    // jsdom has no layout, so no `innerText`: read the text content without the `hidden` elements, as a browser does.
     Object.defineProperty(HTMLElement.prototype, "innerText", {
       configurable: true,
       get(this: HTMLElement) {
         const copy = this.cloneNode(true) as HTMLElement;
-        copy.querySelectorAll("[hidden]").forEach((element) => element.remove());
+        copy.querySelectorAll(NOT_RENDERED).forEach((element) => element.remove());
         return copy.textContent;
+      },
+    });
+    Object.defineProperty(Element.prototype, "checkVisibility", {
+      configurable: true,
+      value(this: Element) {
+        return !this.closest(NOT_RENDERED);
       },
     });
   });
   afterEach(() => {
     Reflect.deleteProperty(HTMLElement.prototype, "innerText");
+    Reflect.deleteProperty(Element.prototype, "checkVisibility");
     document.title = "";
     document.body.innerHTML = "";
   });
 
-  it("reads where the page is, its title, and the shown main's text rather than a hidden earlier page's", () => {
+  it("reads where the page is, its title, and the shown main's text rather than an earlier page's Next.js keeps mounted", () => {
     document.title = "Audit — Prod · Caveman Planning Good";
     document.body.innerHTML = `
-      <div hidden><main>Materials — Prod</main></div>
+      <div style="display: none"><main>Materials — Prod</main></div>
       <nav>Sidebar</nav>
       <main><h1>Audit — Prod</h1>
         <p>Showing   entries
           that match the filters.</p></main>`;
     expect(readPage()).toEqual({
-      url: location.href,
-      readyState: document.readyState,
+      url: "http://localhost:3000/",
+      readyState: "complete",
       title: "Audit — Prod · Caveman Planning Good",
       pending: 0,
+      failed: 0,
       staged: 0,
       text: "Audit — Prod Showing entries that match the filters.",
     });
   });
 
-  it("counts the Suspense boundaries still on their fallback and the streamed parts React hasn't revealed", () => {
+  it("counts the Suspense boundaries still on their fallback, those whose server render failed, and the streamed parts React hasn't revealed", () => {
     document.body.innerHTML = `
       <main><!--$?--><template id="B:0"></template><p>Loading…</p><!--/$-->
-        <!--$?--><template id="B:1"></template><p>Loading…</p><!--/$--></main>
+        <!--$?--><template id="B:1"></template><p>Loading…</p><!--/$-->
+        <!--$!--><template id="B:2" data-dgst="1234"></template><p>Loading…</p><!--/$--></main>
       <div hidden id="S:0"><form aria-label="Filter audit entries"></form></div>
-      <template id="P:2"></template>`;
-    expect(readPage()).toMatchObject({ pending: 2, staged: 1, text: "Loading… Loading…" });
+      <template id="P:3"></template>`;
+    expect(readPage()).toMatchObject({ pending: 2, failed: 1, staged: 1, text: "Loading… Loading… Loading…" });
   });
 
   it("reads the body when no main is shown, such as an error page, and quotes only the start of a long text", () => {
@@ -69,7 +80,7 @@ describe("waitTimedOut", () => {
     const page = {
       evaluate: async <T>(script: string) => {
         scripts.push(script);
-        const state: PageState = { url: "http://localhost:3000/login", readyState: "complete", title: "Sign in", pending: 1, staged: 2, text: 'Sign in "admin"' };
+        const state: PageState = { url: "http://localhost:3000/login", readyState: "complete", title: "Sign in", pending: 1, failed: 3, staged: 2, text: 'Sign in "admin"' };
         return state as T;
       },
     };
@@ -78,7 +89,7 @@ describe("waitTimedOut", () => {
     expect(scripts).toEqual([PAGE_STATE]);
     expect(error.message).toBe(
       `Wait timed out after 25000ms for ${condition}\n` +
-        `The page http://localhost:3000/login (complete, title "Sign in", 1 Suspense boundaries still loading, 2 streamed parts not shown yet) reads: "Sign in \\"admin\\""`,
+        `The page http://localhost:3000/login (complete, title "Sign in", 1 Suspense boundaries still loading, 3 failed, 2 streamed parts not shown yet) reads: "Sign in \\"admin\\""`,
     );
     expect(error.cause).toBe(last);
   });
@@ -95,5 +106,18 @@ describe("waitTimedOut", () => {
 
     const bare = await waitTimedOut(failing(new Error("spawn EAGAIN")), condition, undefined);
     expect(bare.message).toBe(`Wait timed out after 25000ms for ${condition}\nThe page could not be read: Error: spawn EAGAIN`);
+
+    const nothing = await waitTimedOut(failing(undefined), condition, undefined);
+    expect(nothing.message).toBe(`Wait timed out after 25000ms for ${condition}\nThe page could not be read: undefined`);
+  });
+
+  it("stops waiting for a page that doesn't answer, so the wait's own error still comes before the test's time limit", async () => {
+    const last = new Error("Execution context was destroyed");
+    const silent = { evaluate: () => new Promise<never>(() => undefined) };
+    const started = Date.now();
+    const error = await waitTimedOut(silent, condition, last, 50);
+    expect(Date.now() - started).toBeLessThan(1_000);
+    expect(error.message).toBe(`Wait timed out after 25000ms for ${condition}\nThe page could not be read: Error: no answer in 50 ms`);
+    expect(error.cause).toBe(last);
   });
 });
