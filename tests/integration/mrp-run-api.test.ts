@@ -293,7 +293,7 @@ describe("MRP runs through the API", () => {
     }]);
     expect(iPlan.provisional).toEqual([{
       kind: "production-order", needDate: day(18), quantity: "20.000000", plannedStart: day(15), plannedFinish: day(18), lateDays: 0, beyondHorizon: false,
-      bom: boms.i, bomRevision: 1, components: [{ material: r, quantity: "10.000000" }], blockers: ["no-feasible-bom", "provisional-demand"], missing: `${boms.i}/1: ${r} 10.000000 0.000000 10.000000`,
+      bom: boms.i, bomRevision: 1, components: [{ material: r, quantity: "10.000000" }], blockers: ["no-feasible-bom"], missing: `${boms.i}/1: ${r} 10.000000 0.000000 10.000000`,
       order: `${boms.i}/1`, rejectedBoms: [{ bom: boms.i, revision: 1, reason: "shortage", shortages: [{ material: r, required: "10.000000", available: "0.000000", shortage: "10.000000" }] }],
     }]);
     // Buying R is the only executable action.
@@ -304,9 +304,10 @@ describe("MRP runs through the API", () => {
     expect(fPlan.buckets[20]).toMatchObject({ date: day(20), proposedReceipts: "0.000000", projectedAfter: "-10.000000" });
     expect(iPlan.buckets[18]).toMatchObject({ date: day(18), dependentDemand: "20.000000", projectedBefore: "-20.000000", proposedReceipts: "0.000000", projectedAfter: "-20.000000" });
     expect(rPlan.buckets[15]).toMatchObject({ date: day(15), dependentDemand: "10.000000", projectedBefore: "-10.000000", projectedAfter: "0.000000" });
-    // Only F, sized for real demand, raises No Feasible BOM; I's action carries its own `missing`.
+    // F is short only of I, which MRP can make, so I is sized for real demand (#369): both raise No Feasible BOM.
     expect([fPlan, iPlan, rPlan].flatMap(({ exceptions }) => exceptions.map(({ code, params }) => [code, params.material, params.missing]))).toEqual([
       ["NO_FEASIBLE_BOM", f, `${boms.f}/1: ${i} 20.000000 0.000000 20.000000`],
+      ["NO_FEASIBLE_BOM", i, `${boms.i}/1: ${r} 10.000000 0.000000 10.000000`],
     ]);
   });
 

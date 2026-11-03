@@ -183,7 +183,9 @@ describe("the MRP report through the API", () => {
     expect(plan(x.p).proposals).toEqual([]);
     expect(plan(x.p).provisional).toMatchObject([{ needDate: day(20), quantity: "10.000000", bom: x.pBom, blockers: ["no-feasible-bom"], rejectedBoms: pRejected }]);
     expect(plan(x.p).exceptions).toMatchObject([{ code: "NO_FEASIBLE_BOM", params: { order: `${x.pBom}/1` }, rejectedBoms: pRejected }]);
-    expect(plan(x.i).provisional).toMatchObject([{ quantity: "20.000000", bom: x.iBom, components: [{ material: x.v, quantity: "10.000000" }], blockers: ["no-feasible-bom", "provisional-demand"] }]);
+    expect(plan(x.i).provisional).toMatchObject([{ quantity: "20.000000", bom: x.iBom, components: [{ material: x.v, quantity: "10.000000" }], blockers: ["no-feasible-bom"] }]);
+    // P is short only of I, which MRP can make, so I is sized for real demand and raises its own No Feasible BOM (#369).
+    expect(plan(x.i).exceptions).toMatchObject([{ code: "NO_FEASIBLE_BOM", params: { order: `${x.iBom}/1` } }]);
     expect(plan(x.v).proposals.map(({ kind, quantity }) => [kind, quantity])).toEqual([["purchase-requisition", "10.000000"]]);
     for (const material of [x.p, x.i]) expect(plan(material).buckets.every(({ proposedReceipts }) => proposedReceipts === "0.000000")).toBe(true);
     // MRP-051, LFC-027: the order's output is at-risk supply, apart from dependable, and the shortage stays.
@@ -191,7 +193,7 @@ describe("the MRP report through the API", () => {
     expect(plan(x.w).buckets.find(({ date }) => date === day(8))).toMatchObject({ atRiskSupply: "10.000000", dependableSupply: "0.000000" });
     expect(plan(x.w).buckets.find(({ date }) => date === day(12))).toMatchObject({ shortage: "10.000000" });
     // A fallback's stored rejections are never an exception.
-    expect(mine.plans.flatMap(({ exceptions }) => exceptions.map(({ code }) => code)).sort()).toEqual(["AT_RISK_PRODUCTION", "MISSING_USABLE_BOM", "NO_FEASIBLE_BOM"]);
+    expect(mine.plans.flatMap(({ exceptions }) => exceptions.map(({ code }) => code)).sort()).toEqual(["AT_RISK_PRODUCTION", "MISSING_USABLE_BOM", "NO_FEASIBLE_BOM", "NO_FEASIBLE_BOM"]);
   });
 
   it("covers every planned pair of the run unfiltered, and narrows by location to this file's pair", async () => {

@@ -9,6 +9,8 @@ export interface BomChoice {
   bom: MrpBom;
   feasible: boolean;
   rejected: MrpBomRejection[];
+  /** What `bom` lacks, by component code: nothing when it is feasible (#369). */
+  shortages: readonly MrpComponentShortfall[];
 }
 
 /** What the choice reads of a timed production-order proposal. */
@@ -27,27 +29,28 @@ export type ChosenProposal = Pick<MrpProposal, "material" | "quantity" | "planne
  *   (MRP-025, BOM-010), by component code. A revision has at most one line per material.
  *
  * The first BOM with no shortage is chosen and feasible, with the BOMs before it rejected (MRP-024). When
- * none is, the highest-priority usable BOM is returned infeasible, with every candidate rejected (BOM-011).
+ * none is, the highest-priority usable BOM is returned infeasible, with every candidate rejected (BOM-011)
+ * and its own `shortages`, which `planMrp` reads to decide whether its needs are real (#369).
  * `replenishPair` raises Missing BOM or Missing Usable BOM before a proposal with no usable BOM, so one is a
  * programming error.
  */
 export function chooseBom(proposal: ChosenProposal, boms: readonly MrpBom[], available: (component: string) => bigint): BomChoice {
   const candidates = validBoms(boms, proposal.plannedFinish);
   const rejected: MrpBomRejection[] = [];
-  let firstUsable: MrpBom | undefined;
+  let firstUsable: { bom: MrpBom; shortages: MrpComponentShortfall[] } | undefined;
   for (const bom of candidates) {
     const { bom: code, revision } = bom;
     if (!isUsableRevision(bom, bom.inactiveComponents.length === 0, proposal.plannedFinish)) {
       rejected.push({ bom: code, revision, reason: "inactive-component", materials: bom.inactiveComponents });
       continue;
     }
-    firstUsable ??= bom;
     const shortages = shortfalls(bom, proposal.quantity, available);
-    if (shortages.length === 0) return { bom, feasible: true, rejected };
+    if (shortages.length === 0) return { bom, feasible: true, rejected, shortages };
+    firstUsable ??= { bom, shortages };
     rejected.push({ bom: code, revision, reason: "shortage", shortages });
   }
   if (!firstUsable) throw new Error(`No usable BOM of ${proposal.material} is valid on ${proposal.plannedFinish}, so Missing Usable BOM should have stopped its proposals.`);
-  return { bom: firstUsable, feasible: false, rejected };
+  return { ...firstUsable, feasible: false, rejected };
 }
 
 /** The BOMs valid on `date`, in the order they are tested: by priority (1 is the highest), then BOM code. */

@@ -25,7 +25,7 @@ const second = recipe({ bom: "00000002", priority: 2, components: { B: "1" } });
 
 describe("chooseBom", () => {
   it("MRP-024: priority 1 feasible is chosen, with no fallback and no rejection", () => {
-    expect(chooseBom(proposal("6"), [second, first], stock({ A: "6", B: "6" }))).toEqual({ bom: first, feasible: true, rejected: [] });
+    expect(chooseBom(proposal("6"), [second, first], stock({ A: "6", B: "6" }))).toEqual({ bom: first, feasible: true, rejected: [], shortages: [] });
   });
 
   it("MRP-046: tests the lot-rounded 6, so 5 A is infeasible by 1 although 4.1 would fit", () => {
@@ -34,16 +34,19 @@ describe("chooseBom", () => {
       bom: first,
       feasible: false,
       rejected: [{ bom: "00000001", revision: 1, reason: "shortage", shortages: [short("A", "6", "5", "1")] }],
+      shortages: [short("A", "6", "5", "1")],
     });
   });
 
   it("MRP-025: priority 1 is rejected with A 6 required, 5 available, 1 short, and priority 2 is chosen only when its full 6 B is there", () => {
     const rejection = { bom: "00000001", revision: 1, reason: "shortage", shortages: [short("A", "6", "5", "1")] };
-    expect(chooseBom(proposal("6"), [first, second], stock({ A: "5", B: "6" }))).toEqual({ bom: second, feasible: true, rejected: [rejection] });
+    expect(chooseBom(proposal("6"), [first, second], stock({ A: "5", B: "6" }))).toEqual({ bom: second, feasible: true, rejected: [rejection], shortages: [] });
     expect(chooseBom(proposal("6"), [first, second], stock({ A: "5", B: "5.9" }))).toEqual({
       bom: first,
       feasible: false,
       rejected: [rejection, { bom: "00000002", revision: 1, reason: "shortage", shortages: [short("B", "6", "5.9", "0.1")] }],
+      // The chosen BOM's own shortages, never the last candidate's (#369).
+      shortages: [short("A", "6", "5", "1")],
     });
   });
 
@@ -53,6 +56,7 @@ describe("chooseBom", () => {
       bom: second,
       feasible: true,
       rejected: [{ bom: "00000001", revision: 1, reason: "shortage", shortages: [short("A", "10", "4", "6")] }],
+      shortages: [],
     });
     expect(chooseBom(proposal("10"), [higher, second], stock({ C: "1", Z: "30", B: "10" })).rejected).toEqual([
       { bom: "00000001", revision: 1, reason: "shortage", shortages: [short("A", "10", "0", "10"), short("C", "5", "1", "4")] },
@@ -66,6 +70,7 @@ describe("chooseBom", () => {
       bom: withS,
       feasible: true,
       rejected: [{ bom: "00000001", revision: 1, reason: "inactive-component", materials: ["R"] }],
+      shortages: [],
     });
   });
 

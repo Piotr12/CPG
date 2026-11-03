@@ -267,7 +267,8 @@ describe("the MRP report in the UI", () => {
     // MRP-051: the order, its unproduced balance, its inactive U and the label.
     for (const part of [x.order, "10 each", `${x.u} mrprep glaze u`, "At-Risk Existing Production / Inactive BOM Component"]) expect(lists.atRisk).toContain(part);
     // LFC-026 and the parent planning exception, each naming the BOM it rejected and why.
-    expect(lists.codes.sort()).toEqual(["MISSING_USABLE_BOM", "NO_FEASIBLE_BOM"]);
+    // P is short only of I, which MRP can make, so I is sized for real demand and raises its own No Feasible BOM (#369).
+    expect(lists.codes.sort()).toEqual(["MISSING_USABLE_BOM", "NO_FEASIBLE_BOM", "NO_FEASIBLE_BOM"]);
     expect(lists.parent).toContain(`BOM ${x.hBom} / revision 1 — Inactive BOM Component: ${x.t} mrprep retired t`);
 
     // UX-020: F's proposal names priority 2, and Why this BOM shows priority 1's exact shortage of A in A's unit.

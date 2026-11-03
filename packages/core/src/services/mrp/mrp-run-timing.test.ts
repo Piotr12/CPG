@@ -293,9 +293,9 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     expect(provisional).toBeGreaterThan(0);
     expect(actions).toBe(provisional + driven);
     expect(atRisk).toBeGreaterThan(0);
-    // With ten locations a provisional parent's components have nothing to spare, so their provisional needs are sized
-    // a second time; with one, the middle third's surplus covers them.
-    if (size.locations > 1) expect(driven).toBeGreaterThan(0);
+    // Every component has its parameters and a usable BOM, so MRP can supply whatever a provisional parent is short of:
+    // its needs are real demand, and no action is sized for a provisional parent's need (#369).
+    expect(driven).toBe(0);
     if (size.locations === 1) {
       expect(fallbacks).toBeGreaterThan(0);
       expect(made).toBeGreaterThan(0);

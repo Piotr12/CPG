@@ -66,10 +66,13 @@ describe("planning journeys: levels, BOM choice and safety targets", () => {
     await user.post("/goods-receipts", { purchaseOrder: order.id, lines: [{ line: 1, quantity: "20", unit: "kg" }] });
     expect(await supply()).toEqual({ R: { ...NONE, requisitions: 1, purchaseOrderLines: 1, receipts: 1 }, I: NONE, F: NONE });
 
-    // Run 2: R needs nothing more, and F is still provisional, holding no supply, since I is not on hand.
+    // Run 2: R needs nothing more, and I's production order is executable from the R on hand: making it is what lets
+    // F run (#369). F is still provisional, holding no supply, since I is not on hand yet.
     const second = await user.run();
     const run2 = await plans();
     expect(run2.R.proposals).toEqual([]);
+    expect(run2.I.provisional).toEqual([]);
+    expect(run2.I.proposals).toEqual([expect.objectContaining({ kind: "production-order", quantity: "10.000000", bom: iBom, bomRevision: 1, executable: true })]);
     expect(run2.F.proposals).toEqual([]);
     expect(run2.F.provisional).toEqual([expect.objectContaining({ quantity: "10.000000", bom: fBom, blockers: ["no-feasible-bom"] })]);
     expect(noSupply(run2.F), "F holds no supply").toBe(true);
@@ -77,10 +80,10 @@ describe("planning journeys: levels, BOM choice and safety targets", () => {
   }
 
   it("E2E-002: makes F from I from R one level at a time; no step assumes a provisional level's output or leaves a duplicate supply", () => withinOneDay(async () => {
-    const { location, raw, intermediate, finished, fBom, supply, plans } = await threeLevels("E2E-002", true);
+    const { location, raw, intermediate, finished, fBom, supply, plans, second, run2 } = await threeLevels("E2E-002", true);
 
-    // I is made from the R on hand, through an order entered directly: MRP keeps it provisional (#369, below).
-    const iOrder = await user.post("/production-orders", { output: intermediate, location, quantity: "10", unit: "kg", plannedFinish: day(12) });
+    // I is made from the R on hand, through run 2's proposal.
+    const iOrder = await user.accept(second, run2.I.proposals[0].id);
     await user.post(`/production-orders/${iOrder.id}/completions`, { quantity: "10", unit: "kg", components: [{ material: raw, quantity: "20", unit: "kg" }] });
     expect(await supply()).toEqual({
       R: { ...NONE, requisitions: 1, purchaseOrderLines: 1, receipts: 1 }, I: { ...NONE, productionOrders: 1, completions: 1 }, F: NONE,
@@ -102,22 +105,6 @@ describe("planning journeys: levels, BOM choice and safety targets", () => {
     for (const [level, plan] of Object.entries(await plans())) expect([plan.proposals, plan.provisional], level).toEqual([[], []]);
     expect(await supply()).toEqual(done);
   }));
-
-  // E2E-002's "dependencies fulfilled in sequence": with R on hand, run 2 should make I executable. It keeps I
-  // provisional (`provisional-demand`) because F, its only demand, is short of I itself (#369). Flips red when fixed.
-  it.fails("E2E-002 (#369): once R is on hand, the rerun makes I's production order executable", async () => {
-    // Only the clause below may fail: a setup that breaks returns instead, which `it.fails` reports as a failure.
-    let plan: MrpPlanView;
-    let iBom: string;
-    try {
-      ({ iBom, run2: { I: plan } } = await withinOneDay(() => threeLevels("E2E-002 #369", false)));
-    } catch (error) {
-      process.stdout.write(`E2E-002 (#369)'s setup failed, so the test reports a failure: ${String(error)}\n`);
-      return;
-    }
-    expect(plan.provisional).toEqual([]);
-    expect(plan.proposals).toEqual([expect.objectContaining({ kind: "production-order", quantity: "10.000000", bom: iBom, bomRevision: 1, executable: true })]);
-  });
 
   it("E2E-003: with only B's component on hand, MRP pins BOM B, explains A's exact shortage, and the completion posts B's output and consumption", () => withinOneDay(async () => {
     const location = (await masters.post("/locations", { name: "e2epl E2E-003 plant" })).id as string;

@@ -619,7 +619,7 @@ describe("MrpRunService: BOM explosion (#281)", () => {
       },
       {
         code: "PROVISIONAL_PRODUCTION", material: i.id, date: "2026-10-19",
-        details: JSON.stringify({ quantity: "20.000000", leadTimeDays: "3", bom: iBom.id, bomRevision: "1", components: `${r.id} 10.000000`, blockers: "no-feasible-bom,provisional-demand", missing: `${iBom.id}/1: ${r.id} 10.000000 0.000000 10.000000`, order: `${iBom.id}/1` }),
+        details: JSON.stringify({ quantity: "20.000000", leadTimeDays: "3", bom: iBom.id, bomRevision: "1", components: `${r.id} 10.000000`, blockers: "no-feasible-bom", missing: `${iBom.id}/1: ${r.id} 10.000000 0.000000 10.000000`, order: `${iBom.id}/1` }),
       },
     ]);
     expect(await day("00000001", i.id, PLANT, "2026-10-19")).toMatchObject({ dependent_demand: "20.000000", projected_before: "-20.000000", proposed_receipts: "0.000000", projected_after: "-20.000000" });
@@ -634,11 +634,12 @@ describe("MrpRunService: BOM explosion (#281)", () => {
         // The same rejection, structured (E18-S03): the API's and the screen's one shape.
         rejectedBoms: [{ bom: fBom.id, revision: 1, reason: "shortage", shortages: [{ material: i.id, required: "20.000000", available: "0.000000", shortage: "20.000000" }] }],
       }]],
-      [i.id, [], [expect.objectContaining({ needDate: "2026-10-19", plannedStart: "2026-10-16", bom: iBom.id, components: [{ material: r.id, quantity: "10.000000" }], blockers: ["no-feasible-bom", "provisional-demand"] })]],
+      [i.id, [], [expect.objectContaining({ needDate: "2026-10-19", plannedStart: "2026-10-16", bom: iBom.id, components: [{ material: r.id, quantity: "10.000000" }], blockers: ["no-feasible-bom"] })]],
       [r.id, ["purchase-requisition"], []],
     ]);
-    // Provisional rows are never listed as exceptions or marks.
-    expect(plans.flatMap(({ exceptions }) => exceptions.map(({ code }) => code))).toEqual(["NO_FEASIBLE_BOM"]);
+    // Provisional rows are never listed as exceptions or marks. F is short only of I, which MRP can make, so I is sized
+    // for real demand and raises its own No Feasible BOM (#369).
+    expect(plans.flatMap(({ exceptions }) => exceptions.map(({ code }) => code))).toEqual(["NO_FEASIBLE_BOM", "NO_FEASIBLE_BOM"]);
     expect(plans.flatMap(({ marks }) => marks)).toEqual([]);
   });
 
