@@ -49,7 +49,9 @@ function assertRunsTheScript(job: Job) {
 test("spec-copies.yml runs on pushes to main only, outside Deploy's queue", () => {
   assert.deepEqual(Object.keys(cleanup.on), ["push"]);
   assert.deepEqual(cleanup.on.push, { branches: ["main"] });
-  assert.notEqual(cleanup.concurrency?.group, deploy.concurrency?.group);
+  // Deploy's group is an expression that names deploy-production on main (tests/deploy-workflow.test.ts).
+  assert.equal(cleanup.concurrency?.group, "spec-copies");
+  assert.match(deploy.concurrency?.group ?? "", /'deploy-production'/);
   assert.equal(cleanup.concurrency?.["cancel-in-progress"], false);
 });
 
