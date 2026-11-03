@@ -52,8 +52,8 @@ Integration tests that run the twelve cross-domain journeys (E2E-001, 002, 003, 
 
 ### Phase 2: Verification and catalogue
 
-- [ ] 2.1 Full order on one server, times, Prod headroom, CI shards
-- [ ] 2.2 Catalogue, spec status, run log, lessons, full gate
+- [x] 2.1 Full order on one server, times, Prod headroom, CI shards — b9cb43d5
+- [x] 2.2 Catalogue, spec status, run log, lessons, full gate — 28d9196c
 
 ## Delivery: lead and workers (from step 1.4)
 
@@ -92,3 +92,16 @@ Steps 1.4–1.7 are disjoint files, so three cezar workers run them in parallel,
 - 08:25–08:50 UTC: workers 1476767d (e2e-corrections, 6a573f01), 744c5cb6 (E2E-010 and the realistic run, 562c34b9) and 171eaa1e (e2e-automatic, cb9e4ce9). Each branch was reviewed, merged with `--no-ff`, and re-run by the lead on a fresh server: 5/5, 5/5 + 9/9, and 3 + 1 expected fail, followed by `mrp-automatic-api.test.ts` 7/7.
 - Realistic screen run (local): run ID shown 783 ms after the click, `/up` answered at 186 ms (the worker measured 679–792 ms and 183–205 ms). The API run took 118–131 ms.
 - Known exception: each file's UX-023 count test fails alone under `-t` by design, since it counts the file's journeys.
+- 09:40–10:20 UTC, step 2.1, the full order on one fresh standalone server, three passes:
+  - Pass 1 had two failures, both order-dependent reads in existing files, fixed in b9cb43d5. `stock-report.test.ts`'s TEN-018 read its row off the unfiltered report's first page, which the journeys' Prod stock now fills. `transfers.test.ts`'s search check failed whenever `transfers-api.test.ts` ran first, which also fails on `main`.
+  - Pass 2 had one timeout in `audit-history.test.ts`, which ran 11th, before any new file, and passes alone 9/9. It is filed as #373.
+  - Pass 3: 74 files passed and 1 skipped (startup-guard), with 587 tests passed and 2 expected fails, in 709 s.
+- Prod list totals after the full pass: production orders 38 (62 below a page), purchase orders 57 (43 below), customer orders 188, requisitions 232, transfers 26, shipments 30. Customer orders and requisitions were already past a page on `main`, and this PR adds about 11 and 9 of them. Every file passes after them.
+- CI shards on b9cb43d5: integration jobs took 11m21s, 10m10s, 9m00s and 8m44s. All are under Q10's 14 min, so there is no fifth shard.
+- 10:20 UTC: a fresh-context review found nothing blocking. Its fixes are in 7103b8b0: the #369 `it.fails` tests now report a broken setup as a failure, E2E-001 asserts the completion's and the issue's ledger sources, `journeys.ts` has no explicit `any`, and the realistic run's title states what it asserts.
+- Showcase screenshots are posted on #366 (issue comment 6599970725).
+- 10:45 UTC: full gate on 7103b8b0. Lint and typecheck exit 0. `npm run test:coverage`: 676 files, 5619 passed, 100% statements, branches, functions and lines. Build exit 0.
+
+## Outcome
+
+Done. Twelve journeys, each with screen steps and API read-backs. Ten rows plus UX-023 are promoted, E2E-002 and E2E-021 are Partially verified on #369, and E2E-010 gains its MRP half. Follow-ups: #369 (the owner's decision on the provisional-demand rule) and #373 (an audit-history flake).
