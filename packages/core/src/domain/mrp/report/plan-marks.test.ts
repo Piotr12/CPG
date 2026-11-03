@@ -4,6 +4,7 @@ import { planMarks, type StoredWarningRow, type TimedProposal } from "./plan-mar
 const TODAY = "2026-10-01";
 const po: StoredWarningRow = { code: "OVERDUE_SUPPLY", date: TODAY, details: { source: "purchase-order", document: "00000003", position: "1", plannedDate: "2026-09-28", quantity: "30.000000" } };
 const transit: StoredWarningRow = { code: "OVERDUE_TRANSFER", date: TODAY, details: { transfer: "00000002", stage: "in-transit", plannedDate: "2026-09-30", quantity: "25.000000" } };
+const lateRequisition: StoredWarningRow = { code: "LATE_REQUISITION", date: "2026-10-02", details: { document: "00000007", plannedDate: "2026-10-02", plannedFinish: "2026-10-03", lateDays: "1", quantity: "5.000000" } };
 const proposal = (overrides: Partial<TimedProposal>): TimedProposal => ({
   id: "p1", needDate: "2026-10-04", quantity: "12.000000", plannedFinish: "2026-10-04", lateDays: 0, beyondHorizon: false, ...overrides,
 });
@@ -38,6 +39,16 @@ describe("planMarks", () => {
     expect(planMarks([later, earlier], []).map((mark) => mark.date)).toEqual(["2026-10-05", "2026-10-09"]);
   });
 
+  it("#322: marks a late requisition on its required date with its earliest date and days late, before a late proposal of that day", () => {
+    const sameDay = proposal({ needDate: "2026-10-02", plannedFinish: "2026-10-04", lateDays: 2 });
+    const overdueThatDay: StoredWarningRow = { ...po, date: "2026-10-02" };
+    expect(planMarks([sameDay], [lateRequisition, overdueThatDay])).toEqual([
+      { kind: "overdue-supply", date: "2026-10-02", source: "purchase-order", document: "00000003", position: 1, plannedDate: "2026-09-28", quantity: "30.000000" },
+      { kind: "late-requisition", date: "2026-10-02", document: "00000007", plannedDate: "2026-10-02", plannedFinish: "2026-10-03", lateDays: 1, quantity: "5.000000" },
+      { kind: "late-supply", date: "2026-10-02", proposal: "p1", plannedFinish: "2026-10-04", lateDays: 2, quantity: "12.000000" },
+    ]);
+  });
+
   it("leaves out a warning row it can't read, as another image might write, and any other code", () => {
     const broken: StoredWarningRow[] = [
       { ...po, date: null },
@@ -49,6 +60,11 @@ describe("planMarks", () => {
       { ...po, details: { ...po.details!, position: "first" } },
       { ...transit, details: { ...transit.details!, transfer: "" } },
       { ...transit, details: { ...transit.details!, stage: "lost" } },
+      { ...lateRequisition, details: { ...lateRequisition.details!, document: "" } },
+      { ...lateRequisition, details: { ...lateRequisition.details!, plannedFinish: "" } },
+      { ...lateRequisition, details: { ...lateRequisition.details!, lateDays: "0" } },
+      { ...lateRequisition, details: { ...lateRequisition.details!, lateDays: "1.5" } },
+      { ...lateRequisition, details: { document: "00000007", plannedDate: "2026-10-02", plannedFinish: "2026-10-03", quantity: "5.000000" } },
       { ...po, code: "MISSING_BOM" },
     ];
     expect(planMarks([], broken)).toEqual([]);

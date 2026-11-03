@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseDecimal } from "../../quantities/decimal";
-import type { MrpOverdueSupply, MrpOverdueTransfer, MrpPlan, MrpWarning } from "../mrp-result";
+import type { MrpLateRequisition, MrpOverdueSupply, MrpOverdueTransfer, MrpPlan, MrpWarning } from "../mrp-result";
 import { compareWarnings, isMrpWarningCode, MRP_WARNING_CODES, overdueWarnings, toStoredWarning } from "./overdue";
 
 const q = (text: string) => parseDecimal(text)!;
@@ -11,6 +11,9 @@ const supply = (overrides: Partial<MrpOverdueSupply>): MrpOverdueSupply => ({
 });
 const arrival = (overrides: Partial<MrpOverdueTransfer>): MrpOverdueTransfer => ({
   code: "OVERDUE_TRANSFER", material: "M1", location: "L1", date: TODAY, transfer: "00000002", stage: "in-transit", plannedDate: "2026-09-30", quantity: q("25"), ...overrides,
+});
+const late = (overrides: Partial<MrpLateRequisition>): MrpLateRequisition => ({
+  code: "LATE_REQUISITION", material: "M1", location: "L1", date: "2026-10-02", document: "00000007", plannedDate: "2026-10-02", plannedFinish: "2026-10-03", lateDays: 1, quantity: q("5"), ...overrides,
 });
 
 describe("overdueWarnings", () => {
@@ -56,6 +59,10 @@ describe("compareWarnings", () => {
       arrival({ material: "M1", location: "L1", stage: "in-transit", transfer: "00000002" }),
       arrival({ material: "M1", location: "L1", stage: "planned", transfer: "00000002" }),
       arrival({ material: "M1", location: "L1", stage: "planned", transfer: "00000003" }),
+      // After both overdue codes by code rank, even beside an overdue warning with the same ID (#322), then by its required date and ID.
+      late({ material: "M1", location: "L1", plannedDate: "2026-10-02", document: "00000007" }),
+      late({ material: "M1", location: "L1", plannedDate: "2026-10-02", document: "00000008" }),
+      late({ material: "M1", location: "L1", plannedDate: "2026-10-03", document: "00000001" }),
       supply({ material: "M1", location: "L2" }),
       arrival({ material: "M2", location: "L1" }),
     ];
@@ -64,6 +71,7 @@ describe("compareWarnings", () => {
     // A missing position sorts first.
     expect(compareWarnings(supply({ position: undefined }), supply({ position: 1 }))).toBeLessThan(0);
     expect(compareWarnings(arrival({}), arrival({}))).toBe(0);
+    expect(compareWarnings(late({}), late({}))).toBe(0);
   });
 });
 
@@ -84,8 +92,18 @@ describe("toStoredWarning", () => {
   });
 });
 
+describe("toStoredWarning, Late Requisition", () => {
+  it("stores the requisition, its required and earliest dates, its days late as a string and a six-decimal quantity (#322)", () => {
+    expect(toStoredWarning(late({ quantity: q("0.25"), lateDays: 12 }))).toEqual({
+      code: "LATE_REQUISITION", material: "M1", location: "L1", date: "2026-10-02",
+      details: { document: "00000007", plannedDate: "2026-10-02", plannedFinish: "2026-10-03", lateDays: "12", quantity: "0.250000" },
+    });
+  });
+});
+
 describe("isMrpWarningCode", () => {
-  it("knows the two warning codes and no exception code", () => {
+  it("knows the three warning codes and no exception code", () => {
+    expect(MRP_WARNING_CODES).toEqual(["OVERDUE_SUPPLY", "OVERDUE_TRANSFER", "LATE_REQUISITION"]);
     expect(MRP_WARNING_CODES.every(isMrpWarningCode)).toBe(true);
     expect(isMrpWarningCode("MISSING_BOM")).toBe(false);
     expect(isMrpWarningCode("INSUFFICIENT_TRANSFER_STOCK")).toBe(false);

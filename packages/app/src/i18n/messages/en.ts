@@ -2087,6 +2087,7 @@ export const en = {
       marks: {
         overdueSupply: "Overdue · {document} · due {date} · {quantity}",
         overdueTransfer: "Overdue Transfer · {transfer} · due {date} · {quantity}",
+        lateRequisition: "Late · {document} · {days} · earliest {date} · {quantity}",
         lateSupply: "Late Supply · {days} · finish {date} · {quantity}",
         beyondHorizon: "Beyond Horizon · finish {date} · {quantity}",
         days: { one: "{count} day", few: "{count} days", many: "{count} days", other: "{count} days" } as PluralForms,

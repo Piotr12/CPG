@@ -3,10 +3,10 @@ import type { MrpPlan, MrpWarning } from "../mrp-result";
 import { compareCodes } from "../projection/pairs";
 
 /**
- * The MRP warning codes (E18-S02), in rank order. A run stores its warnings in the exception table
+ * The MRP warning codes (E18-S02, #322), in rank order. A run stores its warnings in the exception table
  * after its exceptions, but the read never lists them as exceptions: they are the report's marks.
  */
-export const MRP_WARNING_CODES = ["OVERDUE_SUPPLY", "OVERDUE_TRANSFER"] as const;
+export const MRP_WARNING_CODES = ["OVERDUE_SUPPLY", "OVERDUE_TRANSFER", "LATE_REQUISITION"] as const;
 export type MrpWarningCode = (typeof MRP_WARNING_CODES)[number];
 
 /** Whether a stored code is a warning rather than an exception. */
@@ -52,8 +52,17 @@ export function compareWarnings(a: MrpWarning, b: MrpWarning): number {
   );
 }
 
-const kindOf = (warning: MrpWarning) => (warning.code === "OVERDUE_SUPPLY" ? warning.source : warning.stage);
-const documentOf = (warning: MrpWarning) => (warning.code === "OVERDUE_SUPPLY" ? warning.document : warning.transfer);
+const kindOf = (warning: MrpWarning) => {
+  switch (warning.code) {
+    case "OVERDUE_SUPPLY":
+      return warning.source;
+    case "OVERDUE_TRANSFER":
+      return warning.stage;
+    case "LATE_REQUISITION":
+      return "requisition";
+  }
+};
+const documentOf = (warning: MrpWarning) => (warning.code === "OVERDUE_TRANSFER" ? warning.transfer : warning.document);
 const positionOf = (warning: MrpWarning) => (warning.code === "OVERDUE_SUPPLY" ? (warning.position ?? 0) : 0);
 
 /** A warning as an `MrpRunException` row stores it: the pair, its day, and its other params as strings. */
@@ -65,12 +74,16 @@ export interface StoredWarning {
   details: Record<string, string>;
 }
 
-/** `warning` as a stored row: the quantity as a six-decimal text (it is above zero), the position as a string. */
+/** `warning` as a stored row: the quantity as a six-decimal text (it is above zero), the position and days late as strings. */
 export function toStoredWarning(warning: MrpWarning): StoredWarning {
   const { code, material, location, date, plannedDate } = warning;
   const quantity = formatDecimal(warning.quantity, { fixed: true });
   if (warning.code === "OVERDUE_TRANSFER") {
     return { code, material, location, date, details: { transfer: warning.transfer, stage: warning.stage, plannedDate, quantity } };
+  }
+  if (warning.code === "LATE_REQUISITION") {
+    const { document, plannedFinish, lateDays } = warning;
+    return { code, material, location, date, details: { document, plannedDate, plannedFinish, lateDays: String(lateDays), quantity } };
   }
   const { source, document, position } = warning;
   return { code, material, location, date, details: { source, document, ...(position !== undefined && { position: String(position) }), plannedDate, quantity } };

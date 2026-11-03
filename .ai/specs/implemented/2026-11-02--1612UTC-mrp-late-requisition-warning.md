@@ -1,6 +1,6 @@
 # MRP Late Requisition: a document accepted from a Late Supply proposal keeps its need date, and every run marks an Open requisition its lead time can't meet
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-11-02 16:12 UTC
 **Issue:** #322 (follow-up of #319 and #345) · **Depends on:** proposal acceptance (`implemented/2026-11-01--0737UTC-mrp-proposal-acceptance.md`, #287), proposal timing (`implemented/2026-11-01--0738UTC-mrp-proposal-timing-demand-priority.md`, #279), report weeks and marks (`implemented/2026-11-01--1105UTC-mrp-report-weeks.md`, #285), Make acceptance (`implemented/2026-11-02--1304UTC-mrp-make-proposal-acceptance.md`, #320), all merged · **Design authority:** `.ai/specs/product-brief.md` (R03, R07, R10, N04), `research/CPG-prd001.pdf` §04 "Overdue and late starts", `research/CPG-acceptance.md` MRP-037, MRP-038, BUY-001
 

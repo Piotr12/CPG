@@ -1,4 +1,4 @@
-import { CalendarClock, CalendarX, ClockAlert, Truck, type LucideIcon } from "lucide-react";
+import { CalendarClock, CalendarX, ClockAlert, Hourglass, Truck, type LucideIcon } from "lucide-react";
 import type { Locale, MrpMarkView } from "@cpg/core";
 import { StatusBadge } from "@cpg/ui/backend/feedback/status-badge";
 import { plural } from "@cpg/ui/lib/plural";
@@ -11,6 +11,7 @@ type MarkLabels = Messages["mrp"]["report"]["marks"];
 const ICONS: Record<MrpMarkView["kind"], LucideIcon> = {
   "overdue-supply": ClockAlert,
   "overdue-transfer": Truck,
+  "late-requisition": Hourglass,
   "late-supply": CalendarClock,
   "beyond-horizon": CalendarX,
 };
@@ -22,8 +23,8 @@ export function shortDate(date: string, near: string, locale: Locale): string {
 }
 
 /**
- * A mark's text (E18-S02, UX-018): what it warns of, its document, its own or finish date, and the
- * quantity in the base unit, e.g. "Overdue · PO 00000003/1 · due 28 Sep · 30 KG".
+ * A mark's text (E18-S02, UX-018, #322): what it warns of, its document, its own, finish or earliest date,
+ * and the quantity in the base unit, e.g. "Overdue · PO 00000003/1 · due 28 Sep · 30 KG".
  */
 export function markText(mark: MrpMarkView, unit: string, locale: Locale, t: MarkLabels): string {
   const quantity = `${localeQuantity(mark.quantity, locale)} ${unit}`;
@@ -34,6 +35,10 @@ export function markText(mark: MrpMarkView, unit: string, locale: Locale, t: Mar
     }
     case "overdue-transfer":
       return fill(t.overdueTransfer, { transfer: mark.transfer, date: shortDate(mark.plannedDate, mark.date, locale), quantity });
+    case "late-requisition": {
+      const document = fill(t.documents.requisition, { id: mark.document });
+      return fill(t.lateRequisition, { document, days: plural(locale, mark.lateDays, t.days), date: shortDate(mark.plannedFinish, mark.date, locale), quantity });
+    }
     case "late-supply":
       return fill(t.lateSupply, { days: plural(locale, mark.lateDays, t.days), date: shortDate(mark.plannedFinish, mark.date, locale), quantity });
     case "beyond-horizon":

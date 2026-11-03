@@ -171,6 +171,15 @@ describe("accepting an MRP proposal in the UI", () => {
     expect(await ola.evaluate<string>(`document.querySelector(${JSON.stringify(DIALOG)}).textContent`)).toContain(`5 kg, required by ${day(1)}.`);
     await ola.clickRole("button", "Create requisition");
     await ola.waitUntil(`Boolean(${shown("[data-mrp-document]")})`);
-    expect(await requisitionsOf(ids.sugar)).toEqual([expect.objectContaining({ quantity: "5.000000", requiredDate: day(1) })]);
+    const [requisition] = await requisitionsOf(ids.sugar);
+    expect(requisition).toEqual(expect.objectContaining({ quantity: "5.000000", requiredDate: day(1) }));
+
+    // #322: the requisition keeps the need date, so the next run marks it Late with the proposal's day and finish.
+    await runAndOpen();
+    const latest = json(await api("GET", `/api/tenants/prod/mrp/runs/latest?material=${ids.sugar}&location=${ids.plant}`)).data as MrpLatestView;
+    expect(latest.plans[0].marks.filter(({ kind }) => kind === "late-requisition")).toEqual([
+      { kind: "late-requisition", date: day(1), document: requisition.id, plannedDate: day(1), plannedFinish: day(2), lateDays: 1, quantity: "5.000000" },
+    ]);
+    expect(await ola.evaluate<string>(`${shown("[data-mrp-mark=late-requisition]")}.textContent`)).toMatch(new RegExp(`^Late · Requisition ${requisition.id} · 1 day · earliest .+ · 5 kg$`));
   }));
 });

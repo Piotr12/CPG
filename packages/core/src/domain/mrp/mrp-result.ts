@@ -395,8 +395,28 @@ export interface MrpOverdueTransfer {
   quantity: bigint;
 }
 
+/**
+ * Late Requisition (#322): an Open requisition, not yet overdue, required sooner than its Buy pair's lead
+ * time allows from the run's first day, timed by a proposal's own rule (`scheduleProposal`). It counts on
+ * its own date, `date`, as a document accepted from a Late Supply proposal does (spec Q1).
+ */
+export interface MrpLateRequisition {
+  code: "LATE_REQUISITION";
+  material: string;
+  location: string;
+  date: string;
+  /** The requisition's business ID. */
+  document: string;
+  /** Its required date. */
+  plannedDate: string;
+  /** The earliest date its lead time allows from the run's first day. */
+  plannedFinish: string;
+  lateDays: number;
+  quantity: bigint;
+}
+
 /** An MRP warning (E18-S02): stored with the run, shown as a mark, never listed among its exceptions. */
-export type MrpWarning = MrpOverdueSupply | MrpOverdueTransfer;
+export type MrpWarning = MrpOverdueSupply | MrpOverdueTransfer | MrpLateRequisition;
 
 /**
  * What an uncovered requirement is, in the order MRP serves them on a day (PRD §04 "Overdue demand and

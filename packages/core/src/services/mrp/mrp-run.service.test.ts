@@ -852,6 +852,24 @@ describe("MrpRunService: weeks and marks (#285)", () => {
     expect(plan.weeks!.find(({ week }) => week === 42)!.marks).toEqual(plan.marks);
   });
 
+  it("#322: stores a requisition its lead time can't meet as a Late Requisition warning, marked on its required date and in its week", async () => {
+    const sugar = await material("prod", "Sugar");
+    await parameters("prod", sugar.id, PLANT, "buy", "0.000000", "1.000000", 3);
+    const requisition = await (await scope()).cradle.purchaseRequisitionService.create({ material: sugar.id, location: PLANT, quantity: "5", unit: "each", requiredDate: "2026-10-02" }, ANNA);
+    await run();
+
+    const [plan] = (await latest({ material: sugar.id, bucket: "week" })).plans;
+
+    const mark = { kind: "late-requisition", date: "2026-10-02", document: requisition.id, plannedDate: "2026-10-02", plannedFinish: "2026-10-04", lateDays: 2, quantity: "5.000000" };
+    expect(plan.marks).toEqual([mark]);
+    expect(plan.weeks![0].marks).toEqual([mark]);
+    // A warning, never an exception: the requisition still counts on its own date.
+    expect(plan.exceptions).toEqual([]);
+    expect(plan.buckets[1]).toMatchObject({ date: "2026-10-02", tentativeSupply: "5.000000" });
+    const rows = await sql<{ details: string }>("select details from mrp_run_exception where exception_code = 'LATE_REQUISITION'");
+    expect(rows.map(({ details }) => JSON.parse(details))).toEqual([{ document: requisition.id, plannedDate: "2026-10-02", plannedFinish: "2026-10-04", lateDays: "2", quantity: "5.000000" }]);
+  });
+
   it("folds each plan into weeks only when asked, with the same marks, and says which view it read", async () => {
     const { cabinet, store } = await ux018();
     await run();

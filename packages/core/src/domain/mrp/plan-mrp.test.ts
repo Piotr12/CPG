@@ -1515,6 +1515,66 @@ describe("planMrp: proposal timing (#279)", () => {
   });
 });
 
+describe("planMrp: Late Requisition (#322)", () => {
+  const day = (offset: number) => addDays(TODAY, offset);
+  const set = (leadTimeDays: number, overrides: Partial<MrpPlanningParameters> = {}): MrpPlanningParameters => ({
+    material: "M1", location: "L1", materialType: "raw", procurement: "buy", leadTimeDays, minimumQuantity: 0n, lotMultiple: q("1"), ...overrides,
+  });
+
+  it("warns of the requisition a late proposal's accept created, with the proposal's days late and finish, and counts it on its own date", () => {
+    const need = line({ quantity: q("5"), requiredDate: day(1) });
+    const before = planMrp(inputs({ orderLines: [need], planningParameters: [set(2)] }), TODAY);
+    expect(before.proposals).toMatchObject([{ needDate: day(1), plannedFinish: day(2), lateDays: 1 }]);
+    const accepted = requisition({ code: "00000007", quantity: q("5"), requiredDate: day(1) });
+
+    const after = planMrp(inputs({ orderLines: [need], requisitions: [accepted], planningParameters: [set(2)] }), TODAY);
+
+    expect(after.proposals).toEqual([]);
+    expect(after.warnings).toEqual([
+      { code: "LATE_REQUISITION", material: "M1", location: "L1", date: day(1), document: "00000007", plannedDate: day(1), plannedFinish: day(2), lateDays: 1, quantity: q("5") },
+    ]);
+    // A warning changes no figure: the requisition is tentative supply on its own date (spec Q1).
+    expect(bucketOf(only(after.plans), day(1))).toMatchObject({ tentativeSupply: q("5"), projectedAfter: 0n });
+  });
+
+  it("warns of no requisition its lead time can meet, nor of one at a pair with no readable set, or whose material has an unreadable row", () => {
+    const onTime = requisition({ quantity: q("5"), requiredDate: day(2) });
+    expect(planMrp(inputs({ requisitions: [onTime], planningParameters: [set(2)] }), TODAY).warnings).toEqual([]);
+    const soon = requisition({ quantity: q("5"), requiredDate: day(1) });
+    // An unreadable set never reaches `parametersOf`, so it reads as no set: nothing to judge by (spec Q4).
+    const invalidSet = { material: "M1", location: "L1", record: "planning-parameter-set" as const };
+    expect(planMrp(inputs({ requisitions: [soon], unreadable: [invalidSet] }), TODAY).warnings).toEqual([]);
+    const corrupt = { material: "M1", location: "L1", record: "customer-order-line" as const, document: "00000009/1" };
+    expect(planMrp(inputs({ requisitions: [soon], planningParameters: [set(2)], unreadable: [corrupt] }), TODAY).warnings).toEqual([]);
+  });
+
+  it("MRP-012: names only the part of a partly converted requisition MRP still counts", () => {
+    const partly = requisition({ code: "00000005", quantity: q("100"), converted: q("60"), requiredDate: day(1) });
+    expect(planMrp(inputs({ requisitions: [partly], planningParameters: [set(2)] }), TODAY).warnings).toEqual([
+      { code: "LATE_REQUISITION", material: "M1", location: "L1", date: day(1), document: "00000005", plannedDate: day(1), plannedFinish: day(2), lateDays: 1, quantity: q("40") },
+    ]);
+  });
+
+  it("lists it after the pair's overdue warnings, each pair in code order", () => {
+    const result = planMrp(
+      inputs({
+        requisitions: [
+          requisition({ code: "00000002", material: "M2", quantity: q("1"), requiredDate: TODAY }),
+          requisition({ code: "00000003", quantity: q("2"), requiredDate: TODAY }),
+          requisition({ code: "00000004", quantity: q("3"), requiredDate: day(-1) }),
+        ],
+        planningParameters: [set(1), set(1, { material: "M2" })],
+      }),
+      TODAY,
+    );
+    expect(result.warnings.map(({ code, material, ...rest }) => [code, material, "document" in rest ? rest.document : null])).toEqual([
+      ["OVERDUE_SUPPLY", "M1", "00000004"],
+      ["LATE_REQUISITION", "M1", "00000003"],
+      ["LATE_REQUISITION", "M2", "00000002"],
+    ]);
+  });
+});
+
 describe("planMrp: demand priority (#279)", () => {
   const day = (offset: number) => addDays(TODAY, offset);
   const set = (leadTimeDays: number, overrides: Partial<MrpPlanningParameters> = {}): MrpPlanningParameters => ({

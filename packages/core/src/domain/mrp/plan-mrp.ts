@@ -32,6 +32,7 @@ import { chooseBom } from "./explosion/choose-bom";
 import { explodeProposal } from "./explosion/explode-proposal";
 import { replenishPair, type TimedProposal } from "./sizing/replenish-pair";
 import { planTransfers } from "./supply/transfers";
+import { lateRequisitionWarnings } from "./warnings/late-requisition";
 import { compareWarnings, overdueWarnings } from "./warnings/overdue";
 
 interface PairDraft extends MrpLedger {
@@ -317,7 +318,10 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
   const drivenByParent = (action: MrpProvisionalAction) => (action.blockers.includes("provisional-demand") ? 1 : 0);
   provisional.sort((a, b) => comparePairs(a, b) || compareCodes(a.needDate, b.needDate) || drivenByParent(a) - drivenByParent(b));
   // Like Insufficient Transfer Stock, no warning for a material whose balances an unreadable row left incomplete (#316).
-  const warnings = plans.filter(({ material }) => !unreadable.has(material)).flatMap(overdueWarnings).sort(compareWarnings);
+  const warnings = plans
+    .filter(({ material }) => !unreadable.has(material))
+    .flatMap((plan) => [...overdueWarnings(plan), ...lateRequisitionWarnings(plan, parametersOf.get(pairKey(plan.material, plan.location)), today)])
+    .sort(compareWarnings);
   return { today, dates, plans, proposals, provisional, exceptions: exceptions.sort(compareExceptions), warnings };
 }
 
