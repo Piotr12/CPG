@@ -19,16 +19,17 @@ E20-S04 (#382): for each of the four catalogue rows the slice 3 closing pass cou
 - Errata follow DEM-007's shape: the Evidence line opens "Asserted as the erratum below restates it", the "Missing:" sentence goes, and an `Erratum (#382, …)` bullet follows the Then. The Given/When/Then text stays as exported.
 - No decision record (`research/decisions/D09`) was written. These are spec answers the owner left to the run, not new product decisions, and the errata and spec cells carry them.
 - The epic #272's checklist is ticked when #382 closes on merge, not before.
+- `om-auto-fix-pr 384`: merged `main` at `5579c996`, which had moved MRP-020 and MRP-029 to Passed (#379, PR #389). The one conflict was the Execution status paragraph; #382's entry now leads, #379's follows it, and the counts are 522 / 13 / 0.
 
 ## Changes
 
-- `.ai/specs/research/CPG-acceptance.md`: MRP-004, RUN-018, PRD-002 and E2E-010 move to Passed (automated), each with an erratum. The Execution status gets a #382 entry, and the counts go from 516 / 19 / 0 to 520 / 15 / 0 (535).
+- `.ai/specs/research/CPG-acceptance.md`: MRP-004, RUN-018, PRD-002 and E2E-010 move to Passed (automated), each with an erratum. The Execution status gets a #382 entry, and the counts go from 516 / 19 / 0 to 520 / 15 / 0 (535), and to 522 / 13 / 0 after merging #379 from `main`.
 - `.ai/specs/implemented/2026-11-01--0738UTC-mrp-proposal-timing-demand-priority.md`: Q2 is marked answered on #382, plus a note in the BC paragraph.
 - `.ai/specs/implemented/2026-11-02--1031UTC-mrp-automatic-mode.md`: Q3's answer, plus a note in its Implementation notes.
 
 ## Verification
 
-- Status counts from grep: 520 Passed (automated) and 15 Partially verified.
+- Status counts from grep: 520 Passed (automated) and 15 Partially verified; after merging `main` (#379), 522 and 13.
 - Every path the errata cite exists (`git ls-files`).
 - `npm test`, `npm run lint`, `npm run typecheck`: results under the PR's validation section. Docs only: no code, tests, migrations or UI change, so coverage, build and the integration files don't change, and CI runs them all.
 
