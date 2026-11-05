@@ -30,7 +30,7 @@ Close the two multilevel acceptance gaps #292's closing pass left open, with tes
 - 10:58 Engine MRP-029 case: a first "one shortfall" check listed every day from day 4, because `shortage` is the projection before proposals. Now asserts the first short day and that no day's `projectedAfter` is negative (lesson added).
 - 10:58 Scratch print of the MRP-020 engine case: Q is provisional (`no-feasible-bom`, 20 C available, 30 short) and C's requisition is 30. The API test asserts both.
 - Deviation: the issue scopes MRP-029 to the engine. The catalogue's header says a planning figure passes on the engine, the stored run and the API, so an API test of MRP-029 was added as well. The MRP page has no proposed-receipts column, so the page check reads the balance, shortage and dependent demand only.
-- 11:15 Docker isn't running on this machine, so the integration file ran against a local standalone server (lesson 2026-10-23).
+- 11:00 Docker isn't running on this machine, so the integration file ran against a local standalone server (lesson 2026-10-23).
 
 ## Changes
 
