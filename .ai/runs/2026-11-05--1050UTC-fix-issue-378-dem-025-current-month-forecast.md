@@ -17,6 +17,8 @@ Close DEM-025's last gap: assert that on 2 September the overdue 31 August line 
 - Mutation check: keyed an overdue line's consumption on today's month in `forecast-netting.ts`. Both new tests failed and the old DEM-025 test still passed. Restored the file.
 - Moved DEM-025 to Passed (automated) in `CPG-acceptance.md`: Evidence line rewritten, the status note added at the top, counts now 517 / 18 (checked with `grep -c`). Engine-only evidence follows MRP-048, which the closing pass (#292) promoted on the same kind of evidence. The issue's scope and acceptance criteria ask for exactly this.
 
+- 13:05 — `om-auto-fix-pr 385`: the PR conflicted with `main`, which had landed #379 (#389) and #382 (#384) and moved the catalogue to 522 / 13. Merged `main`, kept #382's status note and put #378's on top; the counts are now 523 Passed (automated) and 12 Partially verified (checked with `grep -c`).
+
 ## Changes
 
 - `packages/core/src/domain/mrp/plan-mrp.test.ts`

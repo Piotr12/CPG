@@ -595,7 +595,7 @@ describe("MrpRunService: BOM explosion (#281)", () => {
       ANNA,
     );
 
-  it("MRP-027, MRP-031, MRP-047: stores F's and I's provisional actions apart from R's requisition, each level on its parent's start, with their BOM and revision", async () => {
+  it("MRP-027, MRP-047: stores F's and I's provisional actions apart from R's requisition, each level on its parent's start, with their BOM and revision", async () => {
     const f = await typed("finished", "Cabinet");
     const i = await typed("intermediate", "Frame");
     const r = await typed("raw", "Steel");
