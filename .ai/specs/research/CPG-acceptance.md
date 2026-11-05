@@ -2203,7 +2203,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/stock-reversals.test.ts` and `packages/core/src/services/goods-issues/issue-reversal.test.ts` (a Completed order → Open with the quantity outstanding again). MRP: `packages/core/src/domain/mrp/plan-mrp.test.ts` ("REV-015": the reopened line's outstanding 35 is firm again and its forecast consumption is unchanged at 40). E11-S02, #91; #275.
+- **Evidence:** `tests/integration/stock-reversals.test.ts` and `packages/core/src/services/goods-issues/issue-reversal.test.ts` (a Completed order → Open with the quantity outstanding again). MRP: `packages/core/src/domain/mrp/plan-mrp.test.ts` ("REV-015": the reopened line's outstanding 35 is firm again and the forecast's residual stays 40). E11-S02, #91; #275.
 - **Given:** Customer order Completed after full GI
 - **When:** Reverse final issued line
 - **Then:** Order reverts to Open if amount outstanding; new demand available to subsequent MRP.
@@ -2712,7 +2712,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("DEM-023": ending stock 8 against a target of 20, minimum 10, multiple 5: one proposal of 15, 23 after; a later day 2 lower gets none), and the run stores and lists such proposals: `tests/integration/mrp-run-api.test.ts` (#278 test). E16-S01, #278.
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("DEM-023": ending stock 8 against a target of 20, minimum 10, multiple 5: one proposal of 15, 23 after; a later day 2 lower gets none), and the run stores and lists lot-rounded proposals: `tests/integration/mrp-run-api.test.ts` (#278 test). E16-S01, #278.
 - **Given:** Projected ending stock 8, safety target 20, minimum 10 and lot multiple 5
 - **When:** Run MRP
 - **Then:** Recommended quantity at least 12, rounded up to suitable lot multiple (15).
@@ -4426,7 +4426,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P2 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/production-orders/production-order.service.test.ts` and `tests/integration/production-orders.test.ts` (same-site, same-date orders save with no resource check), `packages/core/src/domain/mrp/plan-mrp.test.ts` ("UX-024": two production orders overlapping at one site are both projected in full, 50 of output and 100 of component demand, with no capacity check). E10-S01, #88; E15-S02, #277.
+- **Evidence:** `packages/core/src/services/production-orders/production-order.service.test.ts` and `tests/integration/production-orders.test.ts` (same-site, same-date orders save with no resource check), `packages/core/src/domain/mrp/plan-mrp.test.ts` ("UX-024": two production orders overlapping at one site are both projected in full, 50 of output and 100 of component demand, with no capacity check). E10-S01, #88; E15-S03, #277.
 - **Given:** Production orders share time and site
 - **When:** Run planning and inspect UI
 - **Then:** No machine-sequencing or resource constraint required for MVP.
@@ -4444,7 +4444,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/document-lifecycle.test.ts` (an open production order needs all 100 kg on hand; a goods issue of 10 kg of it posts with 200, with no reservation in the way, and the order then shows 90 kg available and a 10 kg shortage), `packages/core/src/domain/mrp/plan-mrp.test.ts` ("UX-026": with the 90 kg left and the order needing 100, MRP shows a 10 kg shortage on the order's start day). #192; E15-S02, #277.
+- **Evidence:** `tests/integration/document-lifecycle.test.ts` (an open production order needs all 100 kg on hand; a goods issue of 10 kg of it posts with 200, with no reservation in the way, and the order then shows 90 kg available and a 10 kg shortage), `packages/core/src/domain/mrp/plan-mrp.test.ts` ("UX-026": with the 90 kg left and the order needing 100, MRP shows a 10 kg shortage on the order's start day). #192; E15-S03, #277.
 - **Given:** Planning has outstanding production demand and raw stock exists
 - **When:** Post otherwise valid physical goods issue before production
 - **Then:** No reservation system blocks transaction; next MRP detects resulting shortage.
