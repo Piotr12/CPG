@@ -466,6 +466,17 @@ describe("planMrp: past days (#275, PRD §04)", () => {
     expect(totals(plan).forecast).toBe("0.000000");
   });
 
+  it("DEM-025 per D08: the overdue 31 August line consumes August's forecast, so September's 100 stays whole and August's 40 still expires", () => {
+    const orderLines = [line({ quantity: q("60"), fulfilled: q("30"), requiredDate: "2026-08-31" })];
+    const forecasts = [forecast("2026-08-31", "100"), forecast("2026-09-10", "100")];
+    const plan = only(planMrp(inputs({ forecasts, orderLines }), "2026-09-02").plans);
+    expect(demandOn(plan, "2026-09-02")).toEqual({ firm: "30.000000", forecast: "0.000000" });
+    // Consuming September instead would leave it 40 and August's whole 100 expired.
+    expect(demandOn(plan, "2026-09-10").forecast).toBe("100.000000");
+    expect(plan.forecastDemand).toMatchObject([{ forecastDate: "2026-09-10", date: "2026-09-10", quantity: q("100") }]);
+    expect(totals(plan)).toEqual({ firm: "30.000000", forecast: "100.000000" });
+  });
+
   it("MRP-048 per D08: on 1 October only the unfulfilled 40 of 30 September moves to today, and September's residual expires", () => {
     const orderLines = [line({ quantity: q("60"), fulfilled: q("20"), requiredDate: "2026-09-30" })];
     const plan = only(planMrp(inputs({ forecasts: [forecast("2026-09-30", "100")], orderLines }), TODAY).plans);
