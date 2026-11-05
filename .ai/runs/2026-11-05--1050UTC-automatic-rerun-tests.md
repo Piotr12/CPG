@@ -24,7 +24,7 @@ Add the tests #381 lists, so TEN-019, DEM-024, RUN-013, RUN-015, LFC-027 and MRP
 - 10:52 — Claimed #381 (assignee, `in-progress`, claim comment).
 - 10:55 — All six tests pass on first run; no defect found, so no bug to file. The at-risk test keeps a usable priority-2 BOM in the first run, so "no replacement" can't be explained by F having no usable BOM.
 - 10:55 — TEN-019's first draft deleted its documents at the end of the test, so a failing assertion leaked them into RUN-024's test. Moved the deletes into the file's `afterEach` (and dropped RUN-024's own delete).
-- 10:56 — Mutation checks: with `assertWritable`'s read-only refusal disabled, TEN-019 fails; with at-risk supply left out of `sizing-balance.ts`, the LFC-027 batch test fails (`documents: 1`). Both sources restored (`git diff` clean).
+- 10:56 — Mutation checks: with `assertWritable`'s read-only refusal disabled, TEN-019 fails at the refusal's own `expect` (the documents comparison after it is the defensive check of what the Then names); with at-risk supply left out of `sizing-balance.ts`, the LFC-027 batch test fails (`documents: 1`). Both sources restored (`git diff` clean).
 - 11:01 — Gate green; committed and opened the PR.
 
 ## Changes

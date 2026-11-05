@@ -180,6 +180,9 @@ describe("the gate around an MRP run", () => {
     ]);
     const before = await prodDocuments();
     expect([before.requisitions.length, before.productionOrders.length]).toEqual([1, 1]);
+    const report = async () => (await tenantScope("prod")).cradle.mrpRunService.latest({});
+    const reportBefore = await report();
+    expect(reportBefore.run).toMatchObject({ id: "00000001", mode: "manual" });
     await sql("update tenant set read_only = 1 where code = 'prod'");
 
     await expect(runAction("prod", 1, { mode: "automatic" })).resolves.toMatchObject({ ok: false, error: { code: "TENANT_READ_ONLY" } });
@@ -187,7 +190,8 @@ describe("the gate around an MRP run", () => {
 
     expect(await prodDocuments()).toEqual(before);
     expect(await runs()).toEqual([{ tenant_code: "prod", code: "00000001" }]);
-    expect((await (await tenantScope("prod")).cradle.mrpRunService.latest({})).run).toMatchObject({ id: "00000001", mode: "manual" });
+    // The old report reads as it did: the same run, plans and proposals.
+    expect(await report()).toEqual(reportBefore);
   });
 
   it("replays an automatic API run with its key: the same run and the same 3 documents, and the tenant holds 3, not 6 (RUN-024, API-027)", async () => {
