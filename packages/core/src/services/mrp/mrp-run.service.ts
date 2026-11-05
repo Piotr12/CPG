@@ -8,6 +8,7 @@ import { isExecutableProposal } from "../../domain/mrp/acceptance/executable-pro
 import { planMrp } from "../../domain/mrp/plan-mrp";
 import { exceptionRejections, isMrpBomRejectionsCode, readBomRejections, toStoredBomRejections, type MrpBomRejectionView } from "../../domain/mrp/report/bom-rejections";
 import { planMarks, type StoredWarningRow } from "../../domain/mrp/report/plan-marks";
+import { isMrpShortageCode, readStoredShortages, toStoredShortages, type MrpShortageView } from "../../domain/mrp/report/stored-shortages";
 import { summarizePlan } from "../../domain/mrp/report/plan-summary";
 import { foldWeeks } from "../../domain/mrp/report/weekly";
 import { MRP_HORIZON_DAYS } from "../../domain/mrp/projection/horizon";
@@ -47,6 +48,12 @@ import {
  */
 export const MRP_ROW_CHUNK = 500;
 
+/**
+ * The longest a run ranks shortages before it yields (#380 spec Q9): the ranking runs pair by pair while the run
+ * writes, so it yields between pairs once this long has passed, however few rows they wrote.
+ */
+export const MRP_RANK_YIELD_MS = 50;
+
 export const MRP_RUN_NOT_FOUND = "No MRP run exists in this tenant yet.";
 export const MRP_RUN_SUPERSEDED = "This MRP run is not the latest one any more. Read the latest run from its first page.";
 
@@ -65,7 +72,7 @@ const bucketFigures = (bucket: MrpBucket) =>
  * today and stores itself with its daily results; the latest run is shown until a newer one
  * supersedes it. A run writes only its own four tables (the run, its daily results, its
  * recommendations, E16-S01, and its exceptions, E16-S03, with its warnings, E18-S02, its provisional
- * actions, E17-S03, and its fallbacks' rejected BOMs, E18-S03) and its audit entry (R10).
+ * actions, E17-S03, its fallbacks' rejected BOMs, E18-S03, and its ranked shortages, #380) and its audit entry (R10).
  */
 export class MrpRunService {
   private readonly em: EntityManager;
@@ -209,7 +216,7 @@ export class MrpRunService {
   private async describe(
     plans: GroupedPlan[],
     proposals: ReadonlyMap<string, StoredProposal[]>,
-    { exceptions, warnings, provisional, rejections }: StoredRows,
+    { exceptions, warnings, provisional, rejections, shortages }: StoredRows,
     weekly: boolean,
   ): Promise<MrpPlanView[]> {
     if (plans.length === 0) return [];
@@ -233,6 +240,7 @@ export class MrpRunService {
         exceptions: exceptions.get(key)!,
         provisional: provisional.get(key)!,
         marks,
+        shortages: shortages.get(key)!,
         ...(weekly && { weeks: foldWeeks(buckets, marks) }),
       };
     });
@@ -272,15 +280,17 @@ export class MrpRunService {
    * written by a newer one before a rollback, is listed with the fallback message (spec Q7). Warnings share
    * the table but are never exceptions (E18-S02, spec Q1): they become the report's marks. Neither are
    * provisional actions (E17-S03 spec Q8), each timed by the engine's own rule from the run's first day, nor a
-   * fallback's rejected BOMs (E18-S03 spec Q1), kept by need date for its proposal.
+   * fallback's rejected BOMs (E18-S03 spec Q1), kept by need date for its proposal, nor a pair's ranked shortages (#380),
+   * kept in the engine's priority order; an entry this image can't read is left out (spec Q8).
    */
   private async exceptionsOf(run: MrpRun, plans: GroupedPlan[], location: string | undefined): Promise<StoredRows> {
     const keyed = <T>() => new Map<string, T[]>(plans.map((plan) => [pairKey(plan.material, plan.location), []]));
     const byPair = keyed<MrpExceptionView>();
     const warnings = keyed<StoredWarningRow>();
     const provisional = keyed<MrpProvisionalView>();
+    const shortages = keyed<MrpShortageView>();
     const rejections = new Map(plans.map((plan) => [pairKey(plan.material, plan.location), new Map<string, MrpBomRejectionView[]>()]));
-    if (plans.length === 0) return { exceptions: byPair, warnings, provisional, rejections };
+    if (plans.length === 0) return { exceptions: byPair, warnings, provisional, rejections, shortages };
     const materials = [...new Set(plans.map((plan) => plan.material))];
     const rows = await this.em.find(
       MrpRunException,
@@ -288,6 +298,10 @@ export class MrpRunService {
       { orderBy: { material: "asc", location: "asc", position: "asc" }, fields: ["material", "location", "exceptionCode", "date", "details"], disableIdentityMap: true },
     );
     for (const row of rows) {
+      if (isMrpShortageCode(row.exceptionCode)) {
+        shortages.get(pairKey(row.material, row.location))?.push(...readStoredShortages(row.details ?? null));
+        continue;
+      }
       if (isMrpBomRejectionsCode(row.exceptionCode)) {
         rejections.get(pairKey(row.material, row.location))?.set(row.date!, readBomRejections((row.details ?? {}) as Record<string, string>));
         continue;
@@ -306,7 +320,7 @@ export class MrpRunService {
       const rejectedBoms = exceptionRejections(row.exceptionCode, row.details ?? null);
       byPair.get(pairKey(row.material, row.location))?.push({ code: row.exceptionCode, message: mrpExceptionMessage(row.exceptionCode), params, ...(rejectedBoms && { rejectedBoms }) });
     }
-    return { exceptions: byPair, warnings, provisional, rejections };
+    return { exceptions: byPair, warnings, provisional, rejections, shortages };
   }
 
   private latestRun(): Promise<MrpRun | null> {
@@ -315,21 +329,26 @@ export class MrpRunService {
 
   /**
    * Inserts every planned day, then every proposal, then every exception, every warning, every provisional
-   * action and every fallback's rejected BOMs at its position in the run's order, in chunks, yielding between them; the run is re-loaded after each `em.clear()`.
-   * Proposals are above zero, so they go through `formatDecimal`.
+   * action, every fallback's rejected BOMs and each pair's ranked shortages at its position in the run's order, in chunks, yielding between them; the run is re-loaded after each `em.clear()`.
+   * Proposals are above zero, so they go through `formatDecimal`. A plan's shortages are ranked as they are read here
+   * (#327), so the run also yields between plans once `MRP_RANK_YIELD_MS` has passed (#380 spec Q9).
    */
   private async writeResults(stored: MrpRun, { plans, proposals, exceptions, warnings, provisional }: MrpResult): Promise<void> {
     let run = stored;
     let pending = 0;
-    const created = async () => {
-      pending += 1;
-      if (pending < MRP_ROW_CHUNK) return;
+    let lastYield = performance.now();
+    const flushAndYield = async () => {
       await this.em.flush();
       this.em.clear();
       await yieldToEventLoop();
+      lastYield = performance.now();
       // A cleared reference would fail `TenantGuard`, which accepts only records loaded through the scope.
       run = await this.em.findOneOrFail(MrpRun, run.id);
       pending = 0;
+    };
+    const created = async () => {
+      pending += 1;
+      if (pending >= MRP_ROW_CHUNK) await flushAndYield();
     };
     for (const { material, location, buckets } of plans) {
       for (const bucket of buckets) {
@@ -367,6 +386,16 @@ export class MrpRunService {
       this.em.create(MrpRunException, { run, position: position++, exceptionCode, ...stored });
       await created();
     }
+    // Each pair's ranked shortages, one row a pair, follow every rejected BOM, so each earlier row keeps its position (#380 spec Q2).
+    for (const plan of plans) {
+      const shortages = toStoredShortages(plan.material, plan.location, plan.shortages);
+      if (shortages) {
+        const { code: exceptionCode, ...stored } = shortages;
+        this.em.create(MrpRunException, { run, position: position++, exceptionCode, ...stored });
+        await created();
+      }
+      if (performance.now() - lastYield >= MRP_RANK_YIELD_MS) await flushAndYield();
+    }
     await this.em.flush();
     this.em.clear();
   }
@@ -379,6 +408,8 @@ interface StoredRows {
   provisional: Map<string, MrpProvisionalView[]>;
   /** Each pair's fallbacks' rejected BOMs, by need date (E18-S03). */
   rejections: Map<string, Map<string, MrpBomRejectionView[]>>;
+  /** Each pair's ranked shortages, in priority order (#380). */
+  shortages: Map<string, MrpShortageView[]>;
 }
 
 /** A stored proposal as `proposalsOf` reads it, before `describe` attaches its rejected BOMs. */
