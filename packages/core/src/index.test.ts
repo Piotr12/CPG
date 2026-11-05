@@ -58,6 +58,7 @@ describe("@cpg/core", () => {
       "MRP_PROPOSAL_NOT_EXECUTABLE",
       "MRP_PROPOSAL_NOT_FOUND",
       "MRP_PROPOSAL_STALE",
+      "MRP_RANK_YIELD_MS",
       "MRP_ROW_CHUNK",
       "MRP_RUN_NOT_FOUND",
       "MRP_RUN_SUPERSEDED",

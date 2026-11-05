@@ -1353,6 +1353,35 @@ describe("MrpRunService: ranked shortages (#380)", () => {
     expect((await latest({ material: cabinet.id })).plans[0].shortages).toMatchObject([{ kind: "customer-order", uncovered: "2.000000" }]);
   });
 
+  it("gives a page only its own pairs' shortages, though a material's other pair, on the next page, has some too", async () => {
+    const store = (await location("prod", "Store")).id;
+    const products = [];
+    for (let index = 0; index < 13; index += 1) products.push(await material("prod", `Product ${index}`));
+    // Thirteen materials at two locations: the 13th's plant pair ends page 1, and its store pair, short, starts page 2.
+    for (const product of products) for (const site of [PLANT, store]) await stock("prod", product.id, site, "1");
+    const last = products.at(-1)!.id;
+    await order("prod", store, [{ material: last, quantity: "4", requiredDate: MONDAY }]);
+    await run();
+
+    const first = await latest();
+    const second = await latest({ page: "2" });
+
+    expect(first.plans.at(-1)).toMatchObject({ material: last, location: PLANT, shortages: [] });
+    expect(first.plans.every(({ shortages }) => shortages.length === 0)).toBe(true);
+    expect(second.plans[0]).toMatchObject({ material: last, location: store, shortages: [{ kind: "customer-order", date: MONDAY, uncovered: "3.000000" }] });
+    expect(first.plans).toHaveLength(25);
+  });
+
+  it("reads a stored row without details as no shortages", async () => {
+    const a = await material("prod", "Cabinet");
+    await stock("prod", a.id, PLANT, "1");
+    await run();
+    await sql(`insert into mrp_run_exception (id, tenant_code, run_id, position, exception_code, material, location, date, details)
+      select 'x1', 'prod', id, 0, 'SHORTAGE', ?, ?, '2026-10-05', null from mrp_run where tenant_code = 'prod'`, [a.id, PLANT]);
+
+    expect((await latest()).plans[0]).toMatchObject({ material: a.id, shortages: [], exceptions: [] });
+  });
+
   it("leaves out a stored entry this image can't read and keeps the others, and returns an empty list for a pair with nothing short (spec Q8)", async () => {
     const a = await material("prod", "Cabinet");
     await stock("prod", a.id, PLANT, "5");
