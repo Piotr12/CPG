@@ -345,7 +345,8 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
       const { flows, ...plan } = draft;
       if (replenished.exception) exceptions.push(replenished.exception);
       const buckets = projectBuckets(plan.physical, flows);
-      plans.push(withShortages({ ...plan, buckets }));
+      // Like its warnings, no ranked shortage from balances an unreadable row left incomplete (#316, #380 spec Q11).
+      plans.push(withShortages({ ...plan, buckets }, unreadable.has(plan.material)));
     }
   }
   plans.sort(comparePairs);
@@ -363,10 +364,11 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
 }
 
 /**
- * `plan` with its `shortages` ranked on first read, then kept (#327): no stored run, API or screen reads them yet
- * (#279 Q4), and ranking every pair's root shares is a large part of a run. The value never depends on when it is read.
+ * `plan` with its `shortages` ranked on first read, then kept (#327): the run ranks them while it writes them (#380),
+ * pair by pair, so it can yield in between, and ranking every pair's root shares is a large part of a run. The value
+ * never depends on when it is read. An unreadable material's plans have none (spec Q11).
  */
-function withShortages(plan: Omit<MrpPlan, "shortages">): MrpPlan {
+function withShortages(plan: Omit<MrpPlan, "shortages">, unreadable: boolean): MrpPlan {
   let shortages: MrpShortage[] | undefined;
-  return Object.defineProperty({ ...plan } as MrpPlan, "shortages", { enumerable: true, get: () => (shortages ??= rankShortages(plan)) });
+  return Object.defineProperty({ ...plan } as MrpPlan, "shortages", { enumerable: true, get: () => (shortages ??= unreadable ? [] : rankShortages(plan)) });
 }
