@@ -25,6 +25,7 @@ const sheet: MrpPlanView = {
   exceptions: [],
   provisional: [],
   marks: [],
+  shortages: [],
 };
 const bearing: MrpPlanView = {
   ...sheet, material: "00000013", materialDescription: "Bearing", materialActive: false, baseUnit: "each", locationActive: false,
@@ -129,7 +130,7 @@ describe("MrpReport", () => {
     const days = within(screen.getByRole("table", { name: en.mrp.report.planLabel }));
     expect(days.getAllByRole("columnheader").map((header) => header.textContent)).toEqual([
       "Date", "Firm demand", "Forecast demand", "Dependent demand", "Transfer out", "Safety stock", "Tentative supply", "Dependable supply", "At-risk supply", "Transfer in",
-      "Projected before proposals", "Projected after proposals", "Shortage", "Warnings",
+      "Projected before proposals", "Projected after proposals", "Shortage", "Warnings", "Short requirements",
     ]);
     // The long headers wrap rather than push the last columns out of view at desktop widths.
     for (const header of days.getAllByRole("columnheader").slice(1, -1)) expect(header.className).toContain("whitespace-normal");
@@ -305,6 +306,45 @@ describe("MrpReport", () => {
       ]);
       expect(marks.every((mark) => mark.getAttribute("data-tone") === "warning" && mark.querySelector("svg"))).toBe(true);
       expect(days.getByText("2026-10-04").closest("tr")!.querySelector("[data-mrp-mark=late-supply]")?.textContent).toBe("Opóźniona dostawa · 4 dni · koniec 8 paź · 12 kg");
+    });
+  });
+
+  describe("Short requirements (#380)", () => {
+    const order = { kind: "customer-order" as const, date: "2026-10-05", originalDate: "2026-10-05", document: "00000021", position: 0, required: "10.000000", uncovered: "5.000000", root: null };
+    const forecast = { ...order, kind: "forecast" as const, document: null, position: null, required: "20.000000", uncovered: "20.000000" };
+    const target = { ...forecast, kind: "safety-target" as const, required: "5.000000", uncovered: "5.000000" };
+    const later = { ...target, date: "2026-10-06", originalDate: "2026-10-06" };
+    const short = { ...sheet, shortages: [order, forecast, target, later] };
+
+    it("DEM-018, DEM-019, DEM-022: lists each day's requirements left short last on its row, in the order MRP serves them, and nothing on a day with none", () => {
+      renderReport(report({ total: 1, plans: [short] }), { material: "00000012", location: "00000003" });
+      const days = within(screen.getByRole("table", { name: en.mrp.report.planLabel }));
+      const listed = (date: string) => [...days.getByText(date).closest("tr")!.querySelectorAll("[data-mrp-shortage]")].map((item) => item.textContent);
+
+      expect(days.getAllByRole("columnheader").at(-1)?.textContent).toBe("Short requirements");
+      expect(listed("2026-10-05")).toEqual([
+        "Customer order 00000021/0 · due Oct 5 · 5 kg short of 10 kg",
+        "Forecast · Oct 5 · 20 kg short of 20 kg",
+        "Safety stock · 5 kg short of 5 kg",
+      ]);
+      expect(listed("2026-10-06")).toEqual(["Safety stock · 5 kg short of 5 kg"]);
+      expect(listed("2026-10-04")).toEqual([]);
+      // The list is the row's last cell, after its warnings.
+      const cells = days.getByText("2026-10-05").closest("tr")!.querySelectorAll("td");
+      expect(cells[cells.length - 1].querySelector("[data-mrp-shortages]")).toBeTruthy();
+      expect(screen.getByText(/Short requirements lists what is still uncovered after proposals/)).toBeTruthy();
+    });
+
+    it("speaks Polish, and the Week view lists none (spec Q5)", () => {
+      renderReport(report({ total: 1, plans: [short] }), { material: "00000012", location: "00000003" }, "pl");
+      const days = within(screen.getByRole("table", { name: pl.mrp.report.planLabel }));
+      expect(days.getAllByRole("columnheader").at(-1)?.textContent).toBe("Niepokryte potrzeby");
+      expect(days.getByText("2026-10-05").closest("tr")!.querySelector("[data-mrp-shortage=customer-order]")?.textContent).toBe("Zamówienie klienta 00000021/0 · termin 5 paź · brakuje 5 kg z 10 kg");
+
+      const figures = Object.fromEntries(["firmDemand", "forecastDemand", "dependentDemand", "transferOut", "tentativeSupply", "dependableSupply", "atRiskSupply", "transferIn", "proposedReceipts", "safetyTarget", "projectedBefore", "projectedAfter"].map((key) => [key, zero]));
+      const weeks = [{ ...figures, start: "2026-10-05", end: "2026-10-11", year: 2026, week: 41, partial: false, lowestProjectedBefore: zero, peakShortage: zero, marks: [] } as unknown as MrpWeekView];
+      renderReport(report({ bucket: "week", total: 1, plans: [{ ...short, weeks }] }), { material: "00000012", location: "00000003", bucket: "week" });
+      expect(screen.getByRole("table", { name: en.mrp.report.weekLabel }).querySelector("[data-mrp-shortages]")).toBeNull();
     });
   });
 

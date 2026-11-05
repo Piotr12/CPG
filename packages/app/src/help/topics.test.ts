@@ -145,6 +145,19 @@ describe("help topics", () => {
   });
 
   it.each([
+    ["en", "Short requirements lists each requirement still uncovered after the proposals, once, on the day it falls due", "then customer orders, earliest due date first, then the forecast, then the safety stock",
+      "Customer order 00000012/1 · due Oct 7 · 8 kg short of 10 kg", "Proposed production of 00000031 · for customer orders due Oct 7", "measure different things", "Each pair also lists its shortages",
+      "(component, transfer, customer-order, planned-component, forecast or safety-target)", "(required, uncovered)"],
+    ["pl", "Niepokryte potrzeby wymieniają każdą potrzebę, której nadal brakuje po propozycjach, raz, w dniu jej terminu", "potem zamówienia klientów, od najwcześniejszego terminu, potem prognoza, na końcu zapas bezpieczeństwa",
+      "Zamówienie klienta 00000012/1 · termin 7 paź · brakuje 8 kg z 10 kg", "Proponowana produkcja 00000031 · dla zamówień klientów z terminem 7 paź", "mierzą co innego", "Każda para wymienia też swoje braki (shortages)",
+      "(component, transfer, customer-order, planned-component, forecast lub safety-target)", "(required, uncovered)"],
+  ] as const)("says in %s what Short requirements lists, in which order, how it differs from the Shortage figure, and its API field (#380)", (locale, ...phrases) => {
+    const text = helpTopics(locale).find((topic) => topic.id === "mrp")!.body.join(" ");
+
+    for (const phrase of phrases) expect(text).toContain(phrase);
+  });
+
+  it.each([
     ["en", "accepting an MRP proposal, or by an automatic MRP run", "shows the run's ID under its own ID", "pinned to the BOM revision MRP chose"],
     ["pl", "akceptację propozycji MRP albo automatyczny przebieg MRP", "pokazuje ID przebiegu pod swoim ID", "przypięte do rewizji BOM-u wybranej przez MRP"],
   ] as const)("says in %s that a production order MRP created shows its run and keeps the BOM revision MRP chose (#320)", (locale, ...phrases) => {

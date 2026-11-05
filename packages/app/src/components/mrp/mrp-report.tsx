@@ -14,6 +14,7 @@ import { materialsByCode } from "./mrp-bom-rejections";
 import { MrpExplanations } from "./mrp-explanations";
 import { MrpMarks, shortDate } from "./mrp-marks";
 import { MrpProposals } from "./mrp-proposals";
+import { MrpShortages } from "./mrp-shortages";
 
 interface MrpReportProps {
   tenant: { code: string };
@@ -174,8 +175,9 @@ function PlanExcess({ plan, locale, labels: t }: { plan: MrpPlanView; locale: Lo
 }
 
 /**
- * One pair's 90 days, today first. The table scrolls sideways in its own region; from `lg` up the balance
- * and the shortage stay pinned at its right edge while the other figures scroll (#311).
+ * One pair's 90 days, today first, each with its warnings and, last, its requirements left short after proposals, in
+ * priority order (#380). The table scrolls sideways in its own region; from `lg` up the balance and the shortage stay
+ * pinned at its right edge while the other figures scroll (#311).
  */
 function PlanDays({ plan, locale, labels: t }: { plan: MrpPlanView; locale: Locale; labels: Messages["mrp"]["report"] }) {
   const figure = (key: (typeof DAY_FIGURES)[number]): DataTableColumn<MrpBucketView> => ({
@@ -193,6 +195,10 @@ function PlanDays({ plan, locale, labels: t }: { plan: MrpPlanView; locale: Loca
     // Last, so the columns existing readers count keep their places (lesson 2026-11-01).
     { id: "warnings", header: t.warnings, kind: "text", className: "whitespace-normal", cell: (day) => (
       <MrpMarks marks={plan.marks.filter(({ date }) => date === day.date)} unit={plan.baseUnit} locale={locale} labels={t.marks} />
+    ) },
+    // After Warnings, so every column before it keeps its place (#380 spec Q5, lesson 2026-11-01).
+    { id: "shortages", header: t.shortages.heading, kind: "text", className: "whitespace-normal", cell: (day) => (
+      <MrpShortages shortages={plan.shortages.filter(({ date }) => date === day.date)} unit={plan.baseUnit} locale={locale} labels={t.shortages} />
     ) },
   ];
   return (
