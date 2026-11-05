@@ -4,7 +4,7 @@ The tracker (GitHub, `Piotr12/CPG`) is the authority; this file keeps the source
 
 ## .ai/specs/product-brief.md
 Backlog source: .ai/specs/product-brief.md
-Last filed: 2026-10-26 (slice 3, E14–E20). The E01–E13 rows were first recorded on 2026-10-20 on a branch that never merged (`1f7a9073`) and are restored here; E01–E06 had been recovered from the tracker, since no record was kept when they were filed on 2026-10-19.
+Last filed: 2026-11-05 (the slice 3 closing pass's leftovers, E15-S04, E17-S04, E18-S04, E19-S04, E20-S04; slice 3 itself, E14–E20, on 2026-10-26). The E01–E13 rows were first recorded on 2026-10-20 on a branch that never merged (`1f7a9073`) and are restored here; E01–E06 had been recovered from the tracker, since no record was kept when they were filed on 2026-10-19.
 
 | Id | Issue | Title | Epic | Depends on | Adopted |
 |---|---|---|---|---|---|
@@ -78,6 +78,11 @@ Last filed: 2026-10-26 (slice 3, E14–E20). The E01–E13 rows were first recor
 | E20-S01 | #290 | A user editing a production-order or master-data quantity sees a tooltip explaining the field's unit and how it converts to the base unit | #272 | E10-S01 (#88), E03-S01 (#22) | no |
 | E20-S02 | #291 | The twelve cross-domain journeys run end to end through the UI and the API, from demand to MRP to documents to postings, and core planning works with no price or accounting module | #272 | E14-S01 (#273), E14-S02 (#274), E15-S01 (#275), E15-S02 (#276), E15-S03 (#277), E16-S01 (#278), E16-S02 (#279), E16-S03 (#280), E17-S01 (#281), E17-S02 (#282), E17-S03 (#283), E18-S01 (#284), E18-S02 (#285), E18-S03 (#286), E19-S01 (#287), E19-S02 (#288), E19-S03 (#289), E05-S01 (#27), E07-S02 (#81), E11-S02 (#91), E11-S03 (#92) | no |
 | E20-S03 | #292 | The acceptance catalogue shows all 535 scenarios passing, the brief marks slices 2 and 3 done, and E06 (#14) closes | #272 | E20-S02 (#291), E20-S01 (#290) | no |
+| E15-S04 | #378 | An overdue order of an ended month is tested to consume its own month's forecast, never the current one's (DEM-025) | #267 | E15-S01 (#275); filed by the slice 3 closing pass (#292) | no |
+| E17-S04 | #379 | Multilevel netting against a dependable receipt, and MRP-020's shortage through the API, are asserted (MRP-020, MRP-029) | #269 | E17-S01 (#281), E17-S02 (#282), E18-S01 (#284); filed by the slice 3 closing pass (#292) | no |
+| E18-S04 | #380 | The stored run, the API and the MRP report show which order, forecast or safety target went short, in priority order (DEM-018…022, MRP-044) | #270 | E16-S02 (#279), E18-S02 (#285), #327; filed by the slice 3 closing pass (#292) | no |
+| E19-S04 | #381 | Automatic runs and reruns are tested over a read-only tenant, edited demand, untouched documents, a failed batch and an at-risk order | #271 | E19-S02 (#288), E19-S03 (#289), E17-S03 (#283); filed by the slice 3 closing pass (#292) | no |
+| E20-S04 | #382 | The owner decides the four catalogue rows the closing pass can't settle (MRP-004, RUN-018, PRD-002, E2E-010) | #272 | the owner's decisions; filed by the slice 3 closing pass (#292) | no |
 
 ### Ids taken by other sources (reserved, not managed by this section)
 

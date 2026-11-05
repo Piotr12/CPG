@@ -1,6 +1,6 @@
 # Lists sort by their quantity columns, and the purchase order list by its creation date
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-25 07:47 UTC
 **Issue:** #224 (follow-up to #217, PR #225) · **Builds on:** #217's list sort (`listSortSchema`, `listOrderBy`, `DataTable` `sortKey`; engineering standards, "List sort and search") · **Design authority:** `.ai/specs/product-brief.md` (R03 exact decimals, R05 tenant isolation)
 
@@ -82,3 +82,10 @@ One phase: it is small and every step ships on its own.
 4. **Planning parameters and safety stock.** Add `minimum`, `multiple` to `PLANNING_PARAMETER_SORTS` and `quantity` to `SAFETY_STOCK_SORTS`, with `parseDecimal` comparators in their order modules. Domain tests cover mixed fixed and unfixed texts and both directions. Table tests cover the headers.
 5. **Purchase order Created column.** Add `created` → `createdAt` to `PURCHASE_ORDER_SORTS` and the service map, add the *Created* column to `OrdersTable` with EN "Created" and PL "Utworzono". Service tests prove the order by `createdAt` with the ID as tie-breaker; component tests prove the column and its link.
 6. **Docs and integration.** Update `engineering-standards.md` ("List sort and search": a stored decimal quantity sorts through `decimalOrderBy`; computed figures still don't). Extend the existing integration tests of the touched lists (`forecasts`, `production-orders`, `purchasing`, `transfers`, `planning-parameters`) with one quantity sort each, checked against values that sort differently as text (`100` and `25`), plus the purchase order list sorted by Created.
+
+## Implementation notes
+
+Implemented by PR #228 (merged 2026-10-25), tracked in `.ai/pipeline/runs/2026-10-25--0750UTC-list-quantity-and-po-date-sort.md`. That PR left this file at the top of `.ai/specs/`; the slice 3 closing pass (#292) moved it here.
+
+- `listOrderBy` takes `{ decimal: field }` instead of a separate `decimalOrderBy(property, column, dir)` export, since property and column share the name for every sorted field. The in-memory lists use `compareDecimals` in `domain/quantities/decimal.ts`.
+- Browser coverage is one file, `tests/integration/list-quantity-sort.test.ts` (the Test tenant's seeded lists, read-only), plus a quantity step in the transfers test, rather than a step in each concept's integration file. Abandoned, Dispatched and Received have unit and page tests only.
