@@ -1,4 +1,5 @@
 import { formatDecimal } from "../../quantities/decimal";
+import { parseStoredFigure } from "../../stock/signed-quantity";
 import { MRP_SHORTAGE_KINDS, type MrpDemandRootKind, type MrpShortage, type MrpShortageKind } from "../mrp-result";
 
 /**
@@ -70,7 +71,7 @@ const ZERO = /^0+\.0{6}$/;
 
 /**
  * A stored row's shortages, in stored order. An entry this image can't read is left out, never guessed (spec Q8): an
- * unknown kind or root kind, a date or quantity not as written, an uncovered quantity of zero, a field its kind needs
+ * unknown kind or root kind, a date or quantity not as written, an uncovered quantity of zero or above what is required, a field its kind needs
  * missing or one it doesn't have present (another image's shape).
  */
 export function readStoredShortages(details: Record<string, string> | null): MrpShortageView[] {
@@ -87,7 +88,7 @@ function readEntry(entry: string): MrpShortageView | null {
   if (fields.length !== 8) return null;
   const [date, kind, originalDate, document, position, required, uncovered, rootKind] = fields;
   if (!ISO_DATE.test(date) || !KINDS.includes(kind) || !ISO_DATE.test(originalDate)) return null;
-  if (!QUANTITY.test(required) || !QUANTITY.test(uncovered) || ZERO.test(uncovered)) return null;
+  if (!QUANTITY.test(required) || !QUANTITY.test(uncovered) || ZERO.test(uncovered) || parseStoredFigure(uncovered) > parseStoredFigure(required)) return null;
   if (WITH_DOCUMENT.includes(kind) === (document === NONE)) return null;
   if ((kind === "customer-order") === (position === NONE) || (position !== NONE && !/^\d+$/.test(position))) return null;
   if ((kind === "planned-component") === (rootKind === NONE) || (rootKind !== NONE && !ROOT_KINDS.includes(rootKind))) return null;

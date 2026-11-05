@@ -128,8 +128,8 @@ describe("the MRP report's short requirements", () => {
     };
     const expectDayFive = (seen: Awaited<ReturnType<typeof listed>>) => {
       expect(seen.kinds).toEqual(["customer-order", "customer-order", "forecast", "safety-target"]);
-      expect(seen.texts[0]).toMatch(new RegExp(`^Customer order ${ids.o2}/0 · due .+ · 8 kg short of 10 kg$`));
-      expect(seen.texts[1]).toMatch(new RegExp(`^Customer order ${ids.o3}/0 · due .+ · 4 kg short of 4 kg$`));
+      expect(seen.texts[0]).toMatch(new RegExp(`^Customer order ${ids.o2}, line 1 · due .+ · 8 kg short of 10 kg$`));
+      expect(seen.texts[1]).toMatch(new RegExp(`^Customer order ${ids.o3}, line 1 · due .+ · 4 kg short of 4 kg$`));
       expect(seen.texts[2]).toMatch(new RegExp(`^Forecast · .+ · ${residual} kg short of ${residual} kg$`));
       expect(seen.texts[3]).toBe("Safety stock · 5 kg short of 5 kg");
       expect(seen.last).toBe(true);

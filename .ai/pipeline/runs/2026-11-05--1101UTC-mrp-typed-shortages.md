@@ -37,6 +37,15 @@ Store each run's ranked shortages (`MrpPlan.shortages`) as `SHORTAGE` rows, retu
 - 11:35 UTC Phase 3: `MrpShortages`, the Day view's last column, EN/PL copy and help. The first screenshot showed every entry wrapping two or three times, so the column got `min-w-80`.
 - 11:40 UTC Phase 4: `BACKWARD_COMPATIBILITY.md`, the six rows to Passed (automated) (522 / 13 / 0), the integration test, and `mrp-report.test.ts`'s column count and end-of-scroll list. The bulk-write lesson was extended.
 - 11:44 UTC Gate green. A fresh-context code review is running.
+- 11:55 UTC Code review: approve, with no Critical or High findings. Folded in:
+  - (Medium) a customer-order line is named from 1, as the order screens name it ("Customer order 00000012, line 1"), and the API keeps the stored position;
+  - (Low) the read sets a pair's list instead of spreading it into `push`, since 200k entries overflow the call stack;
+  - (Low) an entry whose `uncovered` is above its `required` is left out, compared with `parseStoredFigure` because a stored figure can exceed twelve digits;
+  - (Low) a same-width bad date now tests the first field's check;
+  - (Low) Polish "dla prognozy na {date}".
+
+  Filed #390 for Invalid UoM Conversion's 0-based customer-order line. The safety stock repeating on every short day follows #279, so it goes to the owner with Q1 on #386.
+- 12:00 UTC Gate green again. `mrp-shortages.test.ts`, `mrp-report.test.ts` and `mrp-report-api.test.ts` pass 24/24 on a fresh copy of the rebuilt app.
 
 ## Verification
 
@@ -45,6 +54,7 @@ Store each run's ranked shortages (`MrpPlan.shortages`) as `SHORTAGE` rows, retu
 - `mrp-run-timing.test.ts` (timing project), interleaved with `main` on one machine, figures above. All its bounds pass, and it asserts there are pairs with shortages.
 - Integration, against the local standalone build (Docker isn't running on this machine; lesson 2026-10-23), each pass on a fresh copy and `DATA_DIR`: `mrp-shortages.test.ts` 2/2, then all eleven `mrp-*.test.ts` files 79/79, then `e2e-*.test.ts` and `test-reset-api.test.ts` 20/20. After the column-width change, `mrp-shortages.test.ts` and `mrp-report.test.ts` 16/16 on a fresh copy. `test-reset-realistic.test.ts` is left to CI.
 - Screenshot of the Day view's Short requirements from the running build (1280 px), posted on #387.
+- After the review fixes: lint, typecheck and build exit 0; `npm run test:coverage` exit 0 (5,706 passed, 100%); the three report integration files 24/24.
 
 ## Implementation Plan
 

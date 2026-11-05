@@ -2093,7 +2093,7 @@ export const en = {
         kinds: {
           component: "Production order {document} · start {date}",
           transfer: "Transfer {document} · dispatch {date}",
-          "customer-order": "Customer order {document}/{position} · due {date}",
+          "customer-order": "Customer order {document}, line {line} · due {date}",
           "planned-component": "Proposed production of {document} · {root}",
           forecast: "Forecast · {date}",
           "safety-target": "Safety stock",

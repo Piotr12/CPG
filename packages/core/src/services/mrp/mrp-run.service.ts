@@ -299,7 +299,9 @@ export class MrpRunService {
     );
     for (const row of rows) {
       if (isMrpShortageCode(row.exceptionCode)) {
-        shortages.get(pairKey(row.material, row.location))?.push(...readStoredShortages(row.details ?? null));
+        // One row a pair, so the read replaces the empty list rather than spreading a long one into it (a call-stack limit).
+        const key = pairKey(row.material, row.location);
+        if (shortages.has(key)) shortages.set(key, readStoredShortages(row.details ?? null));
         continue;
       }
       if (isMrpBomRejectionsCode(row.exceptionCode)) {

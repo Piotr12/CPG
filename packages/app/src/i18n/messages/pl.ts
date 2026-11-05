@@ -2017,7 +2017,7 @@ export const pl: Messages = {
         kinds: {
           component: "Zlecenie produkcyjne {document} · start {date}",
           transfer: "Przesunięcie {document} · wysyłka {date}",
-          "customer-order": "Zamówienie klienta {document}/{position} · termin {date}",
+          "customer-order": "Zamówienie klienta {document}, pozycja {line} · termin {date}",
           "planned-component": "Proponowana produkcja {document} · {root}",
           forecast: "Prognoza · {date}",
           "safety-target": "Zapas bezpieczeństwa",
@@ -2026,7 +2026,7 @@ export const pl: Messages = {
           component: "dla zleceń produkcyjnych startujących {date}",
           transfer: "dla przesunięć wysyłanych {date}",
           "customer-order": "dla zamówień klientów z terminem {date}",
-          forecast: "dla prognozy z {date}",
+          forecast: "dla prognozy na {date}",
           "safety-target": "dla zapasu bezpieczeństwa",
         },
       },

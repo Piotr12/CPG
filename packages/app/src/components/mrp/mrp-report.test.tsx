@@ -324,7 +324,7 @@ describe("MrpReport", () => {
       expect(days.getAllByRole("columnheader").at(-1)?.textContent).toBe("Short requirements");
       expect(days.getAllByRole("columnheader").at(-1)?.className).toContain("min-w-80");
       expect(listed("2026-10-05")).toEqual([
-        "Customer order 00000021/0 · due Oct 5 · 5 kg short of 10 kg",
+        "Customer order 00000021, line 1 · due Oct 5 · 5 kg short of 10 kg",
         "Forecast · Oct 5 · 20 kg short of 20 kg",
         "Safety stock · 5 kg short of 5 kg",
       ]);
@@ -340,7 +340,7 @@ describe("MrpReport", () => {
       renderReport(report({ total: 1, plans: [short] }), { material: "00000012", location: "00000003" }, "pl");
       const days = within(screen.getByRole("table", { name: pl.mrp.report.planLabel }));
       expect(days.getAllByRole("columnheader").at(-1)?.textContent).toBe("Niepokryte potrzeby");
-      expect(days.getByText("2026-10-05").closest("tr")!.querySelector("[data-mrp-shortage=customer-order]")?.textContent).toBe("Zamówienie klienta 00000021/0 · termin 5 paź · brakuje 5 kg z 10 kg");
+      expect(days.getByText("2026-10-05").closest("tr")!.querySelector("[data-mrp-shortage=customer-order]")?.textContent).toBe("Zamówienie klienta 00000021, pozycja 1 · termin 5 paź · brakuje 5 kg z 10 kg");
 
       const figures = Object.fromEntries(["firmDemand", "forecastDemand", "dependentDemand", "transferOut", "tentativeSupply", "dependableSupply", "atRiskSupply", "transferIn", "proposedReceipts", "safetyTarget", "projectedBefore", "projectedAfter"].map((key) => [key, zero]));
       const weeks = [{ ...figures, start: "2026-10-05", end: "2026-10-11", year: 2026, week: 41, partial: false, lowestProjectedBefore: zero, peakShortage: zero, marks: [] } as unknown as MrpWeekView];

@@ -65,6 +65,8 @@ describe("a run's stored shortages (#380, spec Q2, Q3)", () => {
     expect(read(ORDER, PLANNED)).toHaveLength(2);
     const unreadable = [
       ORDER.replace("2026-10-06 ", "6 Oct "),
+      ORDER.replace(/^2026-10-06/, "06.10.2026"),
+      ORDER.replace("8.000000", "11.000000"),
       ORDER.replace("customer-order", "backorder"),
       ORDER.replace(" 2026-10-06 00000002", " 06.10.2026 00000002"),
       ORDER.replace("10.000000", "10"),
