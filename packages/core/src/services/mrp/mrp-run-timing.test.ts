@@ -55,9 +55,12 @@ import { MRP_BATCH_LIMIT } from "./mrp-batch.service";
  * can supply is now a provisional action, stored apart from the recommendations, and a Make component is sized
  * a second time for its provisional demand.
  *
- * #369 makes a provisional parent's needs real demand when MRP can supply all it is short of. Every component here
- * has its parameters and a usable BOM, so nothing is sized for a provisional parent any more, and the second
- * sizing isn't timed at scale (follow-up #376).
+ * #369 makes a provisional parent's needs real demand when MRP can supply all it is short of. So that the second
+ * sizing stays timed at scale (#376), each location has an unplanned part: no planning parameter set and no stock,
+ * only an open requisition today larger than any need, so its projection never falls short and no exception stops
+ * it. Every top-third priority-1 revision takes it as a fifth line at its parent's home. A proposal through that
+ * revision is short of it, which MRP can't supply (`canSupply`), so a provisional one's needs stay provisional and
+ * its middle-third components are sized a second time for them.
  */
 const SIZES = [
   {
@@ -75,6 +78,10 @@ const ORDER_LINES = 2;
 const FULL_ORDER_LINES = 100;
 /** The lines of each material's one BOM revision (#277). */
 const COMPONENTS = 4;
+/** The codes of each location's unplanned part (#376) and of its requisition, apart from the masters' and documents' own. */
+const UNPLANNED_CODE = "printf('9990%04d', x)";
+/** Its requisition's quantity: more than every need its parents can explode into it, the worst case's included. */
+const UNPLANNED_SUPPLY = 100_000_000;
 /** The spec's bound on the longest stretch a ten-times run keeps the event loop from reading sockets. */
 const STALL_BUDGET_MS = 250;
 /** E19-S03 Q13: an automatic run on the realistic fixture, plan and batch together, and a batch of exactly the cap's candidates. */
@@ -163,6 +170,13 @@ function seed({ materials, locations, lines, forecasts, orders, requisitions, fu
     "insert into material (id, tenant_code, code, type, description, base_unit, active, created_at) values ('mx', 'prod', '99999998', 'raw', 'Retired', 'each', 0, 0)",
     `${seq(third)} insert into bom_component (id, tenant_code, revision_id, position, material_id, quantity, entered_quantity, entered_unit, numerator, denominator)
       select 'bcx' || x, 'prod', 'rev' || (${2 * third} + x), 1 + ${COMPONENTS}, 'mx', '0.250000', '0.25', 'each', '1', '1' from s`,
+    // #376: each location's unplanned part, on every top-third priority-1 revision at its parent's home. Its requisition
+    // is tentative supply, so it covers the part's projection but no feasibility test.
+    `${seq(locations)} insert into material (id, tenant_code, code, type, description, base_unit, created_at) select 'mn' || x, 'prod', ${UNPLANNED_CODE}, 'raw', 'Unplanned part ' || x, 'each', 0 from s`,
+    `${seq(locations)} insert into purchase_requisition (id, tenant_code, code, material_id, location_id, quantity, entered_quantity, entered_unit, numerator, denominator, required_date, converted, status, created_at)
+      select 'rn' || x, 'prod', ${UNPLANNED_CODE}, 'mn' || x, 'l' || x, '${UNPLANNED_SUPPLY}.000000', '${UNPLANNED_SUPPLY}', 'each', '1', '1', '2026-10-27', '0.000000', 'open', 0 from s`,
+    `${seq(third)} insert into bom_component (id, tenant_code, revision_id, position, material_id, quantity, entered_quantity, entered_unit, numerator, denominator)
+      select 'bcn' || x, 'prod', 'rev' || x, 1 + ${COMPONENTS}, 'mn' || (1 + x % ${locations}), '0.250000', '0.25', 'each', '1', '1' from s`,
     "insert into location (id, tenant_code, code, name, created_at) values ('hub', 'prod', '99999999', 'Hub', 0)",
     `${seq(transfers)} insert into transfer (id, tenant_code, code, material_id, source_id, destination_id, quantity, entered_quantity, entered_unit, numerator, denominator,
         planned_dispatch, planned_arrival, dispatched, received, written_off, abandoned, status, created_at, updated_at, version)
@@ -278,15 +292,17 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     expect(forecast[0].n).toBeGreaterThan(0);
     // Day 30, 26 November, through day 89, at each material's home.
     expect(safety).toEqual([{ n: size.materials * 60 }]);
-    // Every material at its home, plus the hub for each transferred material that receives something (#277 Q9).
-    expect(pairs).toBeGreaterThan(size.materials);
-    expect(pairs).toBeLessThanOrEqual(size.materials + Math.min(size.transfers, size.materials));
+    // Every material at its home, plus the hub for each transferred material that receives something (#277 Q9), plus each
+    // location's unplanned part (#376).
+    expect(pairs).toBeGreaterThan(size.materials + size.locations);
+    expect(pairs).toBeLessThanOrEqual(size.materials + size.locations + Math.min(size.transfers, size.materials));
     expect(rows).toBe(pairs * 90);
     // Where demand outruns the stock and receipts, the run proposes (#278), and explodes its Make proposals (#281), executable or provisional (#283).
     expect(proposals).toBeGreaterThan(0);
     expect(made + actions).toBeGreaterThan(0);
-    // The fixture's BOMs are acyclic, valid and usable, and every component has its parameters: no pair is stopped (#280, #281,
-    // #282). Counted by the codes meant, since the table also holds transfers' and feasibility's exceptions and the warnings.
+    // The fixture's BOMs are acyclic, valid and usable, and every component has its parameters but the unplanned parts, which
+    // never fall short (#376): no pair is stopped (#280, #281, #282). Counted by the codes meant, since the table also holds
+    // transfers' and feasibility's exceptions and the warnings.
     expect(
       await count(
         "select count(*) as n from mrp_run_exception where exception_code in ('INVALID_UOM_CONVERSION', 'MISSING_PLANNING_PARAMETERS', 'MISSING_BOM', 'MISSING_USABLE_BOM', 'CYCLIC_BOM')",
@@ -297,9 +313,10 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     expect(provisional).toBeGreaterThan(0);
     expect(actions).toBe(provisional + driven);
     expect(atRisk).toBeGreaterThan(0);
-    // Every component has its parameters and a usable BOM, so MRP can supply whatever a provisional parent is short of:
-    // its needs are real demand, and no action is sized for a provisional parent's need (#369).
-    expect(driven).toBe(0);
+    // At ten times every top-third proposal is provisional through priority 1, short of the unplanned part, which MRP can't
+    // supply (#369): its needs stay provisional and its Make components are sized a second time for them (E17-S03 Q6, #376).
+    // With one location none is provisional, since each falls back to a feasible priority 2, and the run has no such action.
+    expect(driven > 0).toBe(size.locations > 1);
     if (size.locations === 1) {
       expect(fallbacks).toBeGreaterThan(0);
       expect(made).toBeGreaterThan(0);
