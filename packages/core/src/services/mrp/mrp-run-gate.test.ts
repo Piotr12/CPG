@@ -7,6 +7,7 @@ import { loadConfig } from "../../config";
 import { getContainer } from "../../container/container";
 import { tenantScope } from "../../container/tenant-scope";
 import { toDbOptions } from "../../database";
+import { inRequestTransaction } from "../../http/request-transaction";
 import { tenantServerAction } from "../../http/tenant-server-action";
 import { mrpRunSchema } from "../../validators/mrp/mrp-run.schema";
 import type { AuditActor } from "../audit/actor";
@@ -54,6 +55,41 @@ async function threeNeeds() {
   }
 }
 const requisitions = async () => (await sql("select code, mrp_run from purchase_requisition order by code")) as { code: string; mrp_run: string }[];
+/**
+ * In Prod, a Buy need of 5 with a requisition of 2 already entered for it, and a Make need of 20 with a production order of 5
+ * already open for it: both leave a need an automatic run would create a document for.
+ */
+async function needsWithDocuments() {
+  const requiredDate = new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10);
+  const { cradle } = await tenantScope("prod");
+  await cradle.customerService.create({ name: "Retail" }, ANNA);
+  await cradle.locationService.create({ name: "Plant" }, ANNA);
+  const parameters = (material: string, procurement: "buy" | "make") => cradle.planningParameterService.create(
+    { material, location: "00000001", procurement, leadTimeDays: 2, minimumQuantity: "0.000000", lotMultiple: "0.000001" },
+    ANNA,
+  );
+  const need = (material: string, quantity: string) => cradle.customerOrderService.create(
+    { customer: "00000001", location: "00000001", lines: [{ material, quantity, unit: "kg", requiredDate }] },
+    ANNA,
+  );
+  const sugar = await cradle.materialService.create({ type: "raw", description: "Sugar", baseUnit: "kg" }, ANNA);
+  await parameters(sugar.id, "buy");
+  await need(sugar.id, "5");
+  await inRequestTransaction(cradle.em, () => cradle.purchaseRequisitionService.create({ material: sugar.id, location: "00000001", quantity: "2", unit: "kg", requiredDate }, ANNA));
+  const shelf = await cradle.materialService.create({ type: "finished", description: "Shelf", baseUnit: "kg" }, ANNA);
+  const board = await cradle.materialService.create({ type: "raw", description: "Board", baseUnit: "kg" }, ANNA);
+  await cradle.stockService.correct({ material: board.id, location: "00000001", quantity: "500", unit: "kg", reason: "Count" }, ANNA);
+  const bom = await cradle.bomService.create({ output: shelf.id, priority: 1, validFrom: "2026-01-01", validThrough: null, components: [{ material: board.id, quantity: "1", unit: "kg" }] }, ANNA);
+  await parameters(shelf.id, "make");
+  await need(shelf.id, "20");
+  await inRequestTransaction(cradle.em, () =>
+    cradle.productionOrderService.create({ output: shelf.id, location: "00000001", quantity: "5", unit: "kg", plannedFinish: requiredDate, bom: bom.id, revision: 1 }, ANNA));
+}
+/** Every stored column of Prod's requisitions and production orders. */
+const prodDocuments = async () => ({
+  requisitions: await sql("select * from purchase_requisition where tenant_code = 'prod' order by code"),
+  productionOrders: await sql("select * from production_order where tenant_code = 'prod' order by code"),
+});
 
 describe("the gate around an MRP run", () => {
   const dataDir = mkdtempSync(path.join(tmpdir(), "cpg-mrp-gate-"));
@@ -63,6 +99,8 @@ describe("the gate around an MRP run", () => {
   });
   afterEach(async () => {
     await sql("update tenant set read_only = 0");
+    await sql("delete from production_order");
+    await sql("delete from purchase_requisition");
     await sql("delete from mrp_daily_result");
     await sql("delete from mrp_recommendation");
     await sql("delete from mrp_run_exception");
@@ -132,6 +170,26 @@ describe("the gate around an MRP run", () => {
     expect(await runs()).toEqual([]);
   });
 
+  it("TEN-019: a refused automatic run with executable needs in a read-only tenant leaves its requisitions and production orders exactly as before, and the earlier run the latest (#381)", async () => {
+    await needsWithDocuments();
+    // The earlier results: a manual run proposes a requisition of 3 and a production order of 15, so the needs are executable.
+    await expect(runAction("prod", 1, {})).resolves.toMatchObject({ ok: true, data: { id: "00000001", mode: "manual" } });
+    expect(await sql("select kind, quantity from mrp_recommendation where tenant_code = 'prod' order by kind")).toEqual([
+      { kind: "production-order", quantity: "15.000000" },
+      { kind: "purchase-requisition", quantity: "3.000000" },
+    ]);
+    const before = await prodDocuments();
+    expect([before.requisitions.length, before.productionOrders.length]).toEqual([1, 1]);
+    await sql("update tenant set read_only = 1 where code = 'prod'");
+
+    await expect(runAction("prod", 1, { mode: "automatic" })).resolves.toMatchObject({ ok: false, error: { code: "TENANT_READ_ONLY" } });
+    await expect(apiRun("prod", "key-8", null, JSON.stringify({ mode: "automatic" }))).rejects.toMatchObject({ code: "TENANT_READ_ONLY", status: 409 });
+
+    expect(await prodDocuments()).toEqual(before);
+    expect(await runs()).toEqual([{ tenant_code: "prod", code: "00000001" }]);
+    expect((await (await tenantScope("prod")).cradle.mrpRunService.latest({})).run).toMatchObject({ id: "00000001", mode: "manual" });
+  });
+
   it("replays an automatic API run with its key: the same run and the same 3 documents, and the tenant holds 3, not 6 (RUN-024, API-027)", async () => {
     await threeNeeds();
     const body = JSON.stringify({ mode: "automatic" });
@@ -146,7 +204,6 @@ describe("the gate around an MRP run", () => {
     expect(await runs()).toEqual([{ tenant_code: "test", code: "00000001" }]);
     // The same key with a manual body is another request, refused before anything runs.
     await expect(apiRun("test", "key-6", 1, "{}")).rejects.toMatchObject({ code: "IDEMPOTENCY_KEY_REUSED" });
-    await sql("delete from purchase_requisition");
   });
 
   it("refuses the old key with the old generation after a Test reset (R07)", async () => {

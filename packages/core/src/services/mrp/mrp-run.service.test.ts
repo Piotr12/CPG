@@ -215,6 +215,35 @@ describe("MrpRunService.run", () => {
     expect(await day("00000001", cabinet.id, PLANT, "2026-10-25")).toMatchObject({ firm_demand: "60.000000", forecast_demand: "0.000000" });
   });
 
+  it("DEM-024: each rerun re-nets the forecast against the line as it now is: 40 left beside 60, 20 once it is edited to 80, all 100 once it is cancelled (#381)", async () => {
+    const cabinet = await material("prod", "Cabinet");
+    const { cradle } = await scope();
+    await cradle.forecastService.create({ material: cabinet.id, location: PLANT, date: "2026-10-10", quantity: "100", unit: "each" }, ANNA);
+    const placed = await order("prod", PLANT, [{ material: cabinet.id, quantity: "60", requiredDate: "2026-10-20" }]);
+    /** The run's stored forecast residual on the forecast's day and firm demand on the line's. */
+    const netted = async (runId: string) => ({
+      forecast: (await day(runId, cabinet.id, PLANT, "2026-10-10")).forecast_demand,
+      firm: (await day(runId, cabinet.id, PLANT, "2026-10-20")).firm_demand,
+    });
+    await run();
+    expect(await netted("00000001")).toEqual({ forecast: "40.000000", firm: "60.000000" });
+
+    const edited = await cradle.customerOrderService.update(
+      placed.id,
+      { customer: placed.customer, location: PLANT, lines: [{ id: placed.lines[0].id, material: cabinet.id, quantity: "80", unit: "each", requiredDate: "2026-10-20" }] },
+      placed.version,
+      ANNA,
+    );
+    await run();
+    expect(await netted("00000002")).toEqual({ forecast: "20.000000", firm: "80.000000" });
+
+    await cradle.customerOrderService.cancel(placed.id, edited.version, ANNA);
+    await run();
+    expect(await netted("00000003")).toEqual({ forecast: "100.000000", firm: "0.000000" });
+    // Only the latest calculation is kept: no earlier run's figures are left to reuse.
+    expect(await sql("select m.code, count(*) as n from mrp_daily_result r join mrp_run m on r.run_id = m.id group by m.code")).toEqual([{ code: "00000003", n: 90 }]);
+  });
+
   it("stores a fractional negative balance with its sign outside the fraction", async () => {
     const cabinet = await material("prod", "Cabinet");
     await stock("prod", cabinet.id, PLANT, "4.5");
