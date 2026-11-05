@@ -29,7 +29,7 @@ The run was started on #380 by its owner, without answers to its open question. 
 | # | Question | Applied default | Why |
 | --- | --- | --- | --- |
 | Q1 | ⚠ NEEDS HUMAN CONFIRMATION. Is a typed shortage list wanted on the report at all (#279 Q4, #327 Q9)? | **Yes.** Store it, return it, and show it on the Day view. | It is the only way the six rows can pass as written. The other answer is to restate their Then or record an accepted exception, which is the owner's call. This one adds no table, and removing it is one revert. The owner confirms. |
-| Q2 | Where is it stored? | In **`mrp_run_exception`**, as **`SHORTAGE`** rows after the `BOM_REJECTIONS` rows. Each row's `date` is the bucket's day, and `details` holds the rest as strings. | The table already holds a run's warnings (#285), provisional actions (#283) and rejected BOMs (#286) under codes the read tells apart. Its code is a plain string "so a code a later story adds needs no table rebuild" (#280 Q6). A new table would add a migration and touch every migration count (lesson 2026-10-23) for no gain. The rows cascade with the run, so a Test reset clears them. |
+| Q2 | Where is it stored? | In **`mrp_run_exception`**, as **one `SHORTAGE` row per pair** with anything short, after the `BOM_REJECTIONS` rows, on the pair's first short day. Its `details` hold the pair's entries, in priority order, as one text, as `BOM_REJECTIONS` holds its list. | The table already holds a run's warnings (#285), provisional actions (#283) and rejected BOMs (#286) under codes the read tells apart. Its code is a plain string "so a code a later story adds needs no table rebuild" (#280 Q6). A new table would add a migration and touch every migration count (lesson 2026-10-23) for no gain. A row per entry was measured and rejected: at ten times the worst case it stored 162,586 rows, which added 2.7 s to the run and a 334 ms stall to the next run's delete. A row per pair keeps the run within about 5% of `main` (Q9). The rows cascade with the run, so a Test reset clears them. |
 | Q3 | What does a row hold? | Everything `MrpShortage` has: `kind`, `originalDate`, `required`, `uncovered`, `document` and `position` where the kind has them, and a planned component's `rootKind`. Quantities are six-decimal texts (R03). The root's date isn't stored: a planned component's `originalDate` is its root's (#327), so the read rebuilds `root` as `{ kind: rootKind, originalDate }`. | The issue asks for the kind, the order line or forecast, the original date, the uncovered quantity and the root. `required` costs one string, and it makes "8 short of 10" readable. |
 | Q4 | API shape? | Each plan of `GET …/mrp/runs/latest` gains `shortages: MrpShortageView[]`, in the engine's order: by day, then priority. It is always present, in both views, and empty when nothing is short. Weeks don't change. | It follows `exceptions` and `provisional`, which every plan carries. The day is on each entry, so a client groups the list as it likes. |
 | Q5 | Where does the report show it? | On the **Day view**, in a new last column, **Short requirements**, after Warnings. Each day lists its entries in priority order, one line each. The Week view and the pair list don't change. | The issue names "the report's day table for the pair". Putting it last keeps every column that integration tests read by index in its place (lesson 2026-11-01). A week's list would repeat a requirement short on several of its days, and its peak shortage already gives the week's weakest day. |
@@ -42,8 +42,8 @@ The run was started on #380 by its owner, without answers to its open question. 
 
 ## 📝 Proposed Solution
 
-1. **Stored form.** A new module `core/src/domain/mrp/report/stored-shortages.ts` holds `MRP_SHORTAGE_CODE = "SHORTAGE"`, `isMrpShortageCode`, `toStoredShortage(material, location, shortage)` and `readStoredShortage(date, details)`. The reader returns `MrpShortageView | null` (Q8).
-2. **Write.** `MrpRunService.writeResults` gets one more loop after the rejected BOMs. It goes plan by plan in the run's order, reads `plan.shortages` (ranked on that read), creates one `SHORTAGE` row per entry at the next position, and yields on time between plans (Q9). `rankShortages` doesn't change. In `planMrp`, `withShortages` gives an unreadable material's plans an empty list (Q11).
+1. **Stored form.** A new module `core/src/domain/mrp/report/stored-shortages.ts` holds `MRP_SHORTAGE_CODE = "SHORTAGE"`, `isMrpShortageCode`, `toStoredShortages(material, location, shortages)` (null when nothing is short) and `readStoredShortages(details)`, which leaves out an entry it can't read (Q8).
+2. **Write.** `MrpRunService.writeResults` gets one more loop after the rejected BOMs. It goes plan by plan in the run's order, reads `plan.shortages` (ranked on that read), creates the pair's one `SHORTAGE` row at the next position, and yields on time between plans (Q9). `rankShortages` doesn't change. In `planMrp`, `withShortages` gives an unreadable material's plans an empty list (Q11).
 3. **Read.** `exceptionsOf` already reads the page's `mrp_run_exception` rows in position order, and gains a `shortages` map by pair. `describe` puts it on each plan. `MrpPlanView` gains `shortages`.
 4. **Screen.** `PlanDays` gains its last column. A new `MrpShortages` component (`components/mrp/mrp-shortages.tsx`) renders a day's entries as an ordered list, plus `shortageText` for the line. The copy is in the EN/PL `mrp.report.shortages` messages and the `mrp` help topic.
 5. **Contract docs.** `BACKWARD_COMPATIBILITY.md` §4 records the plan field and the stored code, with the rollback note.
@@ -80,18 +80,21 @@ The ranking rule, sizing, proposals, exceptions, marks, weeks, acceptance and th
 
 ## 📝 Data Model
 
-No migration. A `SHORTAGE` row in `mrp_run_exception` holds the pair, `date` (the bucket the requirement counts in), and `details`, all strings:
+No migration. A `SHORTAGE` row in `mrp_run_exception` holds one pair: `date` is its first short day, and `details` is `{ entries }`, the pair's entries in `rankShortages` order, separated by `;`. Each entry is eight space-separated fields, `-` where the kind has none:
 
-| key | always | value |
-| --- | --- | --- |
-| `kind` | yes | one of `MRP_SHORTAGE_KINDS` |
-| `originalDate` | yes | ISO date |
-| `required`, `uncovered` | yes | six-decimal texts above zero (`formatDecimal`, fixed) |
-| `document` | customer order, component, transfer, planned component | business ID (a planned component's parent material) |
-| `position` | customer order | the line's position, decimal |
-| `rootKind` | planned component | the root's kind (never `planned-component`); its date is the row's `originalDate` |
+| field | value |
+| --- | --- |
+| `date` | the bucket the requirement counts in |
+| `kind` | one of `MRP_SHORTAGE_KINDS` |
+| `originalDate` | ISO date |
+| `document` | customer order, component, transfer, planned component: business ID (a planned component's parent material) |
+| `position` | customer order: the line's position, decimal from 0 |
+| `required`, `uncovered` | six-decimal texts above zero (`formatDecimal`, fixed) |
+| `rootKind` | planned component: the root's kind (never `planned-component`); its date is the entry's `originalDate` |
 
-Rows follow every `BOM_REJECTIONS` row, so each earlier row keeps its position. Within the run they go plan by plan, in `planMrp`'s plan order, and each plan's rows in `rankShortages` order.
+For example, `2026-10-06 customer-order 2026-10-06 00000002 0 10.000000 8.000000 -`. IDs and dates hold no space.
+
+Rows follow every `BOM_REJECTIONS` row, so each earlier row keeps its position, plan by plan in `planMrp`'s plan order.
 
 ## 📝 API Contracts
 
@@ -132,13 +135,13 @@ Prototype: none. It is one more text column in the existing Day table (`.ai/spec
 - **A material with an unreadable row:** no entries (Q11).
 - **A pair with no planning parameters:** its shortages are still ranked and stored. `planMrp` ranks every pair (#279).
 - **Test reset:** the runs are deleted and their rows cascade, so the report has no run and no shortages.
-- **Rollback to the previous image:** it doesn't know `SHORTAGE`, so its read lists those rows among each plan's exceptions with the fallback message, as #286 noted for `BOM_REJECTIONS`. There can be many more of them: up to one per short requirement, so a long list in Explanations. Its engine, not the read, empties a pair's proposals, so its proposals are unaffected. Running MRP once after a rollback deletes them; `BACKWARD_COMPATIBILITY.md` says so.
+- **Rollback to the previous image:** it doesn't know `SHORTAGE`, so its read lists those rows among each plan's exceptions with the fallback message, as #286 noted for `BOM_REJECTIONS`. There is one per pair with anything short. Its engine, not the read, empties a pair's proposals, so its proposals are unaffected. Running MRP once after a rollback deletes them; `BACKWARD_COMPATIBILITY.md` says so.
 - **A row a newer image wrote:** skipped (Q8).
 
 ## 📝 Risks & Impact Review
 
 - **Run time.** Ranking every pair returns to every run (#327 measured it once at up to twice `planMrp` on the ten-times worst case, before its own optimisations). Q9 yields between chunks of pairs, and the timing test is compared with `main` before and after. The phase fails if the stall budget is exceeded.
-- **Row count.** At most one row per requirement that is short on its day, plus one per day the target is short, per pair. This is bounded by the snapshot's documents plus 90 per pair. The service test prints the realistic dataset's count.
+- **Row count.** One row per pair with anything short: 29 on the realistic Test dataset, 300 at ten times the worst case. A pair's entries are bounded by the snapshot's documents plus 90 days of the target, and a page reads at most 25 pairs' rows.
 - **Tests that count stored rows.** Any test counting `mrp_run_exception` rows by exclusion, or reading them all, now sees `SHORTAGE` (lesson 2026-11-01). Grep for both `MrpRunException` and raw `mrp_run_exception` SQL (`mrp-run.service.test.ts`, `mrp-run-timing.test.ts`), and count by the codes meant.
 - **Contract.** One additive field and one stored code, recorded in `BACKWARD_COMPATIBILITY.md`. Clients comparing whole plans exactly see a new key.
 - **Reversibility.** No schema change. Removing the write stops new rows, and the next run deletes the old ones.
@@ -160,8 +163,8 @@ One phase, one PR: a vertical slice from the stored row to the screen, which onl
 
 ## 📋 Implementation Plan
 
-1. **Stored form and engine.** `report/stored-shortages.ts` with `toStoredShortage` and `readStoredShortage`, and unit tests: every kind's row, round trip, and each malformed field skipped (unknown kind or root kind, a bad date, a zero or malformed quantity, a customer order without a document or position, a planned component without its root). `planMrp`: an unreadable material's plans have no shortages (Q11), with a `plan-mrp.test.ts` case.
-2. **Write and read.** `writeResults` writes `SHORTAGE` rows after the rejected BOMs and yields on time between plans (Q9), with a test that it yields. `exceptionsOf` keeps `SHORTAGE` rows apart, and `describe` and `MrpPlanView` carry `shortages`. `mrp-run.service.test.ts` uses the six rows' fixtures against a real SQLite file: DEM-018 (12 in stock, an order of 10, a target of 25), DEM-019 (15 available, an order of 10 and a forecast residual of 20 on one day), DEM-020 (O1 due before O2), DEM-021 (two same-date lines, both input orders), DEM-022 (a forecast of 40 and a target top-up of 20), and MRP-044's multilevel case (a raw component short under a parent's customer order and forecast, with the root). For each, the stored rows, `latest()`'s `shortages` and their order are asserted, and the exceptions stay as before. The same test covers a read-only tenant's read, a Test reset clearing them, a second run replacing them, and the run's other row positions unchanged. Fix any test that counts `mrp_run_exception` rows by exclusion. Run `mrp-run-timing.test.ts` against `main` and the branch and record the figures in the run log. It prints and asserts the `SHORTAGE` row count.
+1. **Stored form and engine.** `report/stored-shortages.ts` with `toStoredShortages` and `readStoredShortages`, and unit tests: every kind's entry, round trip, and each malformed entry left out (unknown kind or root kind, a bad date, a zero or malformed quantity, a customer order without a document or position, a planned component without its root). `planMrp`: an unreadable material's plans have no shortages (Q11), with a `plan-mrp.test.ts` case.
+2. **Write and read.** `writeResults` writes one `SHORTAGE` row per pair after the rejected BOMs and yields on time between plans (Q9), with a test that it yields. `exceptionsOf` keeps `SHORTAGE` rows apart, and `describe` and `MrpPlanView` carry `shortages`. `mrp-run.service.test.ts` uses the six rows' fixtures against a real SQLite file: DEM-018 (12 in stock, an order of 10, a target of 25), DEM-019 (15 available, an order of 10 and a forecast residual of 20 on one day), DEM-020 (O1 due before O2), DEM-021 (two same-date lines, both input orders), DEM-022 (a forecast of 40 and a target top-up of 20), and MRP-044's multilevel case (a raw component short under a parent's customer order and forecast, with the root). For each, the stored rows, `latest()`'s `shortages` and their order are asserted, and the exceptions stay as before. The same test covers a read-only tenant's read, a Test reset clearing them, a second run replacing them, and the run's other row positions unchanged. Fix any test that counts `mrp_run_exception` rows by exclusion. Run `mrp-run-timing.test.ts` against `main` and the branch and record the figures in the run log. It prints and asserts the count of pairs with shortages.
 3. **Screen and copy.** `MrpShortages` and `shortageText` for every kind and root kind, the column in `PlanDays`, the EN/PL messages, the intro sentence and the help paragraphs. Component tests for each kind's text in both languages, the priority order within a day, a day with none, and the column's place (last). Page and help tests, with the dictionary and glossary guards.
 4. **Contract docs and catalogue.** `BACKWARD_COMPATIBILITY.md` §4 gets the field and the stored code, with the rollback note (the row volume, and run MRP once after a rollback). In `research/CPG-acceptance.md`, DEM-018 to DEM-022 and MRP-044 move to Passed (automated), each Evidence line naming the test that asserts every clause of its Then (lesson 2026-11-05), and the catalogue's counts are updated.
 5. **Integration.** A new `tests/integration/mrp-shortages.test.ts` in Prod with its own records: one pair with no planning parameters, so nothing is proposed and the ranking shows as is. It has stock, two customer orders on consecutive days, a forecast on the later day, and a safety target. After a run, `GET …/mrp/runs/latest` returns the shortages in priority order with kind, document and uncovered quantity, the same for a normal user and the admin, and also while the tenant is read-only. The page's Day view lists the same entries in the same order. Run it with `mrp-report.test.ts` and `mrp-report-api.test.ts`, whose tables gain a column.
