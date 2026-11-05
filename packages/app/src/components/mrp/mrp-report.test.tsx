@@ -322,6 +322,7 @@ describe("MrpReport", () => {
       const listed = (date: string) => [...days.getByText(date).closest("tr")!.querySelectorAll("[data-mrp-shortage]")].map((item) => item.textContent);
 
       expect(days.getAllByRole("columnheader").at(-1)?.textContent).toBe("Short requirements");
+      expect(days.getAllByRole("columnheader").at(-1)?.className).toContain("min-w-80");
       expect(listed("2026-10-05")).toEqual([
         "Customer order 00000021/0 · due Oct 5 · 5 kg short of 10 kg",
         "Forecast · Oct 5 · 20 kg short of 20 kg",

@@ -197,7 +197,8 @@ function PlanDays({ plan, locale, labels: t }: { plan: MrpPlanView; locale: Loca
       <MrpMarks marks={plan.marks.filter(({ date }) => date === day.date)} unit={plan.baseUnit} locale={locale} labels={t.marks} />
     ) },
     // After Warnings, so every column before it keeps its place (#380 spec Q5, lesson 2026-11-01).
-    { id: "shortages", header: t.shortages.heading, kind: "text", className: "whitespace-normal", cell: (day) => (
+    // Wide enough that an entry reads on a line or two; the table scrolls in its own region anyway (#311).
+    { id: "shortages", header: t.shortages.heading, kind: "text", className: "min-w-80 whitespace-normal", cell: (day) => (
       <MrpShortages shortages={plan.shortages.filter(({ date }) => date === day.date)} unit={plan.baseUnit} locale={locale} labels={t.shortages} />
     ) },
   ];
