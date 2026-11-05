@@ -1874,7 +1874,7 @@ describe("planMrp: BOM explosion (E17-S01, #281)", () => {
   const proposalsOf = (result: ReturnType<typeof planMrp>, material: string) => result.proposals.filter((proposal) => proposal.material === material);
   const actionsOf = (result: ReturnType<typeof planMrp>, material: string) => result.provisional.filter((action) => action.material === material);
 
-  it("BOM-006, MRP-031: a Make proposal of 10 through 0.5 A and 0.2 B per one needs 5 A and 2 B on its planned start, and carries its BOM and revision", () => {
+  it("BOM-006: a Make need of 10 through 0.5 A and 0.2 B per one needs 5 A and 2 B on its planned start, and its provisional action carries its BOM and revision", () => {
     const due = order("I", "10", 5);
     const result = planMrp(
       inputs({
@@ -1909,10 +1909,11 @@ describe("planMrp: BOM explosion (E17-S01, #281)", () => {
     ]);
   });
 
-  it("MRP-029: P1 and P2 need 30 and 40 of R on one day; with 50 R on hand, R shows 70 of dependent demand, one shortfall of 20 and one requisition", () => {
+  it("MRP-029: P1 and P2 need 30 and 40 of R on one day; with 50 R on hand and a purchase order of 15 due before, R shows 70 of dependent demand, one shortfall of 5 and one requisition of 5", () => {
     const result = planMrp(
       inputs({
         stock: [stock("R", "L1", "50")],
+        purchaseOrderLines: [orderLine({ material: "R", quantity: q("15"), plannedDate: day(2) })],
         orderLines: [order("P1", "10", 6), order("P2", "10", 6)],
         planningParameters: [params("P1", "make", 2), params("P2", "make", 2), params("R", "buy")],
         boms: [recipe("P1", { R: "3" }), recipe("P2", { R: "4" }, { bom: "00000002" })],
@@ -1920,9 +1921,14 @@ describe("planMrp: BOM explosion (E17-S01, #281)", () => {
       TODAY,
     );
     const r = planAt(result.plans, "R");
-    expect(bucketOf(r, day(4))).toMatchObject({ dependentDemand: q("70"), projectedBefore: -q("20"), proposedReceipts: q("20"), projectedAfter: 0n });
+    // The receipt is dependable supply (BUY-002): 50 + 15 is netted once against the parents' 70 together, leaving 5.
+    expect(bucketOf(r, day(2))).toMatchObject({ dependableSupply: q("15"), projectedBefore: q("65") });
+    expect(bucketOf(r, day(4))).toMatchObject({ dependentDemand: q("70"), projectedBefore: -q("5"), shortage: q("5"), proposedReceipts: q("5"), projectedAfter: 0n });
+    // Short from day 4 only, and that one requisition covers every later day.
+    expect(r.buckets.find(({ shortage }) => shortage > 0n)?.date).toBe(day(4));
+    expect(r.buckets.every(({ projectedAfter }) => projectedAfter >= 0n)).toBe(true);
     expect(r.plannedComponentDemand.map(({ parent, quantity }) => [parent, quantity])).toEqual([["P1", q("30")], ["P2", q("40")]]);
-    expect(proposalsOf(result, "R").map(({ kind, needDate, quantity, bom }) => [kind, needDate, quantity, bom])).toEqual([["purchase-requisition", day(4), q("20"), null]]);
+    expect(proposalsOf(result, "R").map(({ kind, needDate, quantity, bom }) => [kind, needDate, quantity, bom])).toEqual([["purchase-requisition", day(4), q("5"), null]]);
   });
 
   it("MRP-020: 100 C, an open order taking 80 C on Monday and a proposal needing 50 C on Wednesday leave −30 on Wednesday, which drives a proposal for C", () => {
