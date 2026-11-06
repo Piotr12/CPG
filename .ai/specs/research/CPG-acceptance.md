@@ -3,7 +3,7 @@
 **Source:** AgntPad Notes / CPG  
 **Original:** https://s-d3aa472a035945a58dddbd80d87d9328.agntpad.page/CPG/acceptance.html  
 **Exported:** 2026-10-19  
-**Status:** Partially executed (see Execution status)
+**Status:** Executed: every scenario Passed (automated) (see Execution status)
 
 ## Execution status
 
