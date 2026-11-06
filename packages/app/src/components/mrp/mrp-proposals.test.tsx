@@ -13,7 +13,7 @@ const buy = (overrides: Partial<MrpProposalView> = {}): MrpProposalView => ({
 const plan = (proposals: MrpProposalView[]): MrpPlanView => ({
   material: "00000031", materialDescription: "Sugar", materialActive: true, baseUnit: "kg",
   location: "00000002", locationName: "Plant North", locationActive: true, lowestProjectedBefore: "-100.000000", firstShortageDate: "2026-10-05", excess: "0.000000",
-  buckets: [], proposals, exceptions: [], provisional: [],
+  buckets: [], proposals, exceptions: [], provisional: [], shortages: [],
   // The read's marks of these proposals (planMarks): a late one on its need date.
   marks: proposals.filter(({ lateDays }) => lateDays > 0).map(({ id, needDate, plannedFinish, lateDays, beyondHorizon, quantity }): MrpMarkView => ({
     kind: beyondHorizon ? "beyond-horizon" : "late-supply", date: needDate, proposal: id, plannedFinish, lateDays, quantity,

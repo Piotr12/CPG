@@ -18,7 +18,7 @@ const LOCATIONS: NamedRecordView[] = [
 const plan = (material: string, description: string, overrides: Partial<MrpPlanView> = {}): MrpPlanView => ({
   material, materialDescription: description, materialActive: true, baseUnit: "PCS",
   location: "00000002", locationName: "Plant North", locationActive: true, lowestProjectedBefore: "-10.000000", firstShortageDate: "2026-11-09", excess: "0.000000",
-  buckets: [], proposals: [], exceptions: [], provisional: [], marks: [], ...overrides,
+  buckets: [], proposals: [], exceptions: [], provisional: [], marks: [], shortages: [], ...overrides,
 });
 const action = (overrides: Partial<MrpProvisionalView> = {}): MrpProvisionalView => ({
   kind: "production-order", needDate: "2026-11-09", quantity: "20.000000", plannedStart: "2026-11-06", plannedFinish: "2026-11-09", lateDays: 0, beyondHorizon: false,

@@ -4,6 +4,7 @@ import type { MrpBucket, MrpProposalTiming } from "../../domain/mrp/mrp-result";
 import type { ReadProvisional } from "../../domain/mrp/provisional/stored-provisional";
 import type { MrpBomRejectionView } from "../../domain/mrp/report/bom-rejections";
 import type { MrpMark } from "../../domain/mrp/report/plan-marks";
+import type { MrpShortageView } from "../../domain/mrp/report/stored-shortages";
 import type { MrpWeek } from "../../domain/mrp/report/weekly";
 import type { MrpReportBucket } from "../../validators/mrp/mrp-latest.schema";
 
@@ -93,6 +94,12 @@ export interface MrpPlanView {
   provisional: MrpProvisionalView[];
   /** What the report marks on its days (E18-S02): overdue supply and transfers, late and Beyond Horizon proposals. */
   marks: MrpMarkView[];
+  /**
+   * What the run left uncovered after proposals (#380, E16-S02's ranking): each requirement once, on the day it is
+   * short, by day, then in the order MRP serves them (customer orders by original date, then the forecast, then the
+   * safety target; a planned component as its root). Empty when nothing is short; in both views.
+   */
+  shortages: MrpShortageView[];
   /** Its days folded into ISO weeks, for display: only when the read asked for `bucket=week` (E18-S02). */
   weeks?: MrpWeekView[];
 }
@@ -116,6 +123,7 @@ export interface MrpExceptionView {
 }
 
 export type { MrpBomRejectionView, MrpComponentShortfallView } from "../../domain/mrp/report/bom-rejections";
+export type { MrpShortageView } from "../../domain/mrp/report/stored-shortages";
 
 /**
  * One stored replenishment proposal (E16-S01): what it would create, the day it covers, a six-decimal

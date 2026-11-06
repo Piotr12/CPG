@@ -64,7 +64,7 @@ export * from "./services/stock/stock.service";
 export * from "./services/reports/demand-review.service";
 export * from "./services/mrp/mrp-run.service";
 export * from "./services/mrp/mrp-acceptance.service";
-export type { MrpBomRejectionView, MrpBucketView, MrpComponentShortfallView, MrpExceptionView, MrpFigure, MrpLatestView, MrpMarkView, MrpPlanView, MrpProposalView, MrpProvisionalView, MrpRunAnswer, MrpRunView, MrpCreatedDocumentView, MrpWeekView } from "./services/mrp/mrp-run-view";
+export type { MrpBomRejectionView, MrpBucketView, MrpComponentShortfallView, MrpExceptionView, MrpFigure, MrpLatestView, MrpMarkView, MrpPlanView, MrpProposalView, MrpProvisionalView, MrpRunAnswer, MrpRunView, MrpCreatedDocumentView, MrpShortageView, MrpWeekView } from "./services/mrp/mrp-run-view";
 export { DEMAND_WINDOWS, isoWeek, MAX_DEMAND_OFFSET, type DemandBucket, type DemandBucketFrame } from "./domain/demand/demand-buckets";
 export { formatDecimal, parseDecimal } from "./domain/quantities/decimal";
 export * from "./services/reports/stock-report.service";

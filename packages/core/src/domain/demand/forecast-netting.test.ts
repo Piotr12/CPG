@@ -73,6 +73,15 @@ describe("netForecasts (D08)", () => {
     expect(expired).toMatchObject({ residual: 100n, placedOn: null });
   });
 
+  it("DEM-025 per D08: an overdue line of an ended month consumes that month's forecast, never the current month's", () => {
+    // 60 ordered for 31 August, 30 of it shipped; run on 2 September.
+    const placed = netForecasts([forecast(100, "2026-08-31"), forecast(100, "2026-09-10")], [order(60, "2026-08-31")], "2026-09-02");
+    expect(placed.map(({ residual, placedOn }) => [residual, placedOn])).toEqual([
+      [40n, null],
+      [100n, "2026-09-10"],
+    ]);
+  });
+
   it("returns each forecast with its own residual", () => {
     const input = forecast(100);
     expect(netForecasts([input], [], TODAY)[0].forecast).toBe(input);
