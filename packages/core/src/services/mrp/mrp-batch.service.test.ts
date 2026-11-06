@@ -300,6 +300,29 @@ describe("an automatic MRP run's batch (E19-S03)", () => {
     expect(await count("purchase_requisition")).toBe(0);
   });
 
+  it("RUN-015: a failed batch keeps the run's exceptions: the Make pair with no BOM is still stored and listed as Missing BOM beside the failure (#381)", async () => {
+    const cabinet = await material("Cabinet");
+    await parameters(cabinet.id, "make");
+    await order(cabinet.id, [["3", "2026-10-05"]]);
+    const items = await buyMaterials(5);
+    await sql("update material set active = 0 where code = ? and tenant_code = 'prod'", [items[2]]);
+
+    const view = await run();
+
+    expect(view.creation).toMatchObject({ status: "failed", code: "MATERIAL_INACTIVE", candidate: { material: items[2] } });
+    expect([await count("purchase_requisition"), await count("production_order")]).toEqual([0, 0]);
+    // The savepoint took back the documents only: the run's calculated exceptions stay stored, with the pair's ranked
+    // shortages after them (#380), and the latest read lists both.
+    expect(await sql("select exception_code as code, material from mrp_run_exception where tenant_code = 'prod' order by position")).toEqual([
+      { code: "MISSING_BOM", material: cabinet.id },
+      { code: "SHORTAGE", material: cabinet.id },
+    ]);
+    const cabinetPlan = await plan(cabinet.id);
+    expect(cabinetPlan.exceptions.map(({ code }) => code)).toEqual(["MISSING_BOM"]);
+    expect(cabinetPlan.shortages).toMatchObject([{ kind: "customer-order", required: "3.000000", uncovered: "3.000000" }]);
+    expect((await (await scope()).cradle.mrpRunService.latest({})).run.creation).toEqual(view.creation);
+  });
+
   it("caps a batch: above the limit it records MRP_BATCH_TOO_LARGE with the count, and creates nothing (spec Q15)", async () => {
     container.register({ mrpBatchLimit: asValue(2) });
     await buyMaterials(3);
@@ -418,6 +441,86 @@ describe("an automatic MRP run's batch (E19-S03)", () => {
     expect(await (await scope()).cradle.productionOrderService.get(produced.id)).toEqual(before);
     expect((await plan(output.id)).excess).toBe("20.000000");
     expect(await count("production_order")).toBe(1);
+  });
+
+  it("RUN-013: an automatic run leaves an Open purchase-order line and a production order as they were when new demand wants more and earlier, and creates only the rest (#381)", async () => {
+    const { cradle } = await scope();
+    const shelf = await material("Shelf");
+    const board = await cradle.materialService.create({ type: "raw", description: "Board", baseUnit: "each" }, ANNA);
+    await cradle.stockService.correct({ material: board.id, location: PLANT, quantity: "500", unit: "each", reason: "Count" }, ANNA);
+    const bom = await cradle.bomService.create({ output: shelf.id, priority: 1, validFrom: "2026-01-01", validThrough: null, components: [{ material: board.id, quantity: "1", unit: "each" }] }, ANNA);
+    await parameters(shelf.id, "make");
+    const produced = await inRequestTransaction(cradle.em, () =>
+      cradle.productionOrderService.create({ output: shelf.id, location: PLANT, quantity: "100", unit: "kg", plannedFinish: "2026-10-12", bom: bom.id, revision: 1 }, ANNA),
+    );
+    const sugar = await material("Sugar");
+    await parameters(sugar.id);
+    await cradle.supplierService.create({ name: "Mill" }, ANNA);
+    const po = await cradle.purchaseOrderService.create({ supplier: "00000001", location: PLANT, lines: [{ material: sugar.id, quantity: "40", unit: "kg", plannedDate: "2026-10-15" }] }, ANNA);
+    const [orderBefore, poBefore] = [await (await scope()).cradle.productionOrderService.get(produced.id), await (await scope()).cradle.purchaseOrderService.get(po.id)];
+    // More, and earlier, than either document brings.
+    await order(shelf.id, [["130", "2026-10-08"]]);
+    await order(sugar.id, [["70", "2026-10-06"]]);
+
+    const view = await run();
+
+    expect(view.creation).toEqual({ status: "created", documents: 2 });
+    expect(await (await scope()).cradle.productionOrderService.get(produced.id)).toEqual(orderBefore);
+    expect(orderBefore).toMatchObject({ quantity: "100.000000", plannedFinish: "2026-10-12", status: "open" });
+    expect(await (await scope()).cradle.purchaseOrderService.get(po.id)).toEqual(poBefore);
+    expect(poBefore).toMatchObject({ status: "open", lines: [expect.objectContaining({ quantity: "40.000000", plannedDate: "2026-10-15", status: "open" })] });
+    // The extra need becomes new documents of the run, beside the old ones.
+    expect(await productionOrders()).toEqual([
+      { code: produced.id, output: shelf.id, quantity: "100.000000", planned_finish: "2026-10-12", mrp_run: null },
+      { code: "00000002", output: shelf.id, quantity: "130.000000", planned_finish: "2026-10-08", mrp_run: "00000001" },
+    ]);
+    expect(await requisitions()).toEqual([{ code: "00000001", material: sugar.id, quantity: "70.000000", required_date: "2026-10-06", mrp_run: "00000001" }]);
+    expect(await count("purchase_order")).toBe(1);
+  });
+
+  it("LFC-027, MRP-051: an automatic run beside an at-risk F order creates no F order or R requisition and leaves the order as it was; once it is cancelled, a rerun creates F through a usable BOM (#381)", async () => {
+    const { cradle } = await scope();
+    const f = await material("Cabinet");
+    const r = await material("Retired steel", { type: "raw" });
+    const s = await material("Oak", { type: "raw" });
+    const recipe = (component: string, priority: number) =>
+      cradle.bomService.create({ output: f.id, priority, validFrom: "2026-01-01", validThrough: null, components: [{ material: component, quantity: "1", unit: "kg" }] }, ANNA);
+    const rBom = await recipe(r.id, 1);
+    // A usable fallback, so only the at-risk order holds F back.
+    const sBom = await recipe(s.id, 2);
+    await cradle.stockService.correct({ material: s.id, location: PLANT, quantity: "100", unit: "kg", reason: "Count" }, ANNA);
+    await parameters(f.id, "make");
+    await parameters(r.id, "buy");
+    const produced = await inRequestTransaction(cradle.em, () =>
+      cradle.productionOrderService.create({ output: f.id, location: PLANT, quantity: "10", unit: "kg", plannedFinish: "2026-10-08", bom: rBom.id, revision: 1 }, ANNA),
+    );
+    await order(f.id, [["10", "2026-10-12"]]);
+    // Allowed while only BOMs and the open order's pinned revision use R (E10-S05, LFC-015).
+    const { version: rVersion } = await cradle.materialService.get(r.id);
+    await inRequestTransaction(cradle.em, () => cradle.materialService.update(r.id, { active: false }, rVersion, ANNA));
+    const before = await (await scope()).cradle.productionOrderService.get(produced.id);
+
+    const view = await run();
+
+    expect(view.creation).toEqual({ status: "created", documents: 0 });
+    expect(await (await scope()).cradle.productionOrderService.get(produced.id)).toEqual(before);
+    expect(before).toMatchObject({ bom: rBom.id, revision: 1, quantity: "10.000000", status: "open" });
+    expect(await productionOrders()).toEqual([expect.objectContaining({ code: produced.id, mrp_run: null })]);
+    expect(await count("purchase_requisition")).toBe(0);
+    const atRisk = await plan(f.id);
+    expect(atRisk.exceptions.map(({ code }) => code)).toEqual(["AT_RISK_PRODUCTION"]);
+    expect(atRisk.proposals).toEqual([]);
+
+    const { version } = await (await scope()).cradle.productionOrderService.get(produced.id);
+    await inRequestTransaction(cradle.em, () => cradle.productionOrderService.cancel(produced.id, version, ANNA));
+    const rerun = await run();
+
+    expect(rerun.creation).toEqual({ status: "created", documents: 1 });
+    expect(rerun.documents).toEqual([expect.objectContaining({ kind: "production-order", id: "00000002" })]);
+    expect(await (await scope()).cradle.productionOrderService.get("00000002")).toMatchObject({
+      output: f.id, bom: sBom.id, revision: 1, quantity: "10.000000", status: "open", mrpRun: "00000002",
+    });
+    expect(await count("purchase_requisition")).toBe(0);
   });
 
   it("N06: creates and changes no transfer when the source can't supply one", async () => {
