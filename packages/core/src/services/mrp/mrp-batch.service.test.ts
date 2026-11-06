@@ -311,9 +311,15 @@ describe("an automatic MRP run's batch (E19-S03)", () => {
 
     expect(view.creation).toMatchObject({ status: "failed", code: "MATERIAL_INACTIVE", candidate: { material: items[2] } });
     expect([await count("purchase_requisition"), await count("production_order")]).toEqual([0, 0]);
-    // The savepoint took back the documents only: the run's calculated exceptions stay stored, and the latest read lists them.
-    expect(await sql("select exception_code as code, material from mrp_run_exception where tenant_code = 'prod'")).toEqual([{ code: "MISSING_BOM", material: cabinet.id }]);
-    expect((await plan(cabinet.id)).exceptions.map(({ code }) => code)).toEqual(["MISSING_BOM"]);
+    // The savepoint took back the documents only: the run's calculated exceptions stay stored, with the pair's ranked
+    // shortages after them (#380), and the latest read lists both.
+    expect(await sql("select exception_code as code, material from mrp_run_exception where tenant_code = 'prod' order by position")).toEqual([
+      { code: "MISSING_BOM", material: cabinet.id },
+      { code: "SHORTAGE", material: cabinet.id },
+    ]);
+    const cabinetPlan = await plan(cabinet.id);
+    expect(cabinetPlan.exceptions.map(({ code }) => code)).toEqual(["MISSING_BOM"]);
+    expect(cabinetPlan.shortages).toMatchObject([{ kind: "customer-order", required: "3.000000", uncovered: "3.000000" }]);
     expect((await (await scope()).cradle.mrpRunService.latest({})).run.creation).toEqual(view.creation);
   });
 
