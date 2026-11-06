@@ -1,6 +1,6 @@
 # MRP typed shortages: the stored run, the API and the report show which order, forecast or safety target went short, in priority order
 
-**Status:** draft (Q1 awaits the owner's confirmation)
+**Status:** implemented
 **Created:** 2026-11-05 10:56 UTC
 **Issue:** #380 (E18-S04, epic #270) · **Depends on:** proposal timing and demand priority (`implemented/2026-11-01--0738UTC-mrp-proposal-timing-demand-priority.md`, #279), report weeks and marks (`implemented/2026-11-01--1105UTC-mrp-report-weeks.md`, #285), root-requirement ranking (`implemented/2026-11-02--1613UTC-mrp-root-requirement-ranking.md`, #327), all merged · **Design authority:** `.ai/specs/product-brief.md` (R03, R07, R10), `research/CPG-prd001.pdf` §04 "Overdue demand and priority" and §07, `research/CPG-acceptance.md` DEM-018 to DEM-022 and MRP-044
 
@@ -28,7 +28,7 @@ The run was started on #380 by its owner, without answers to its open question. 
 
 | # | Question | Applied default | Why |
 | --- | --- | --- | --- |
-| Q1 | ⚠ NEEDS HUMAN CONFIRMATION. Is a typed shortage list wanted on the report at all (#279 Q4, #327 Q9)? | **Yes.** Store it, return it, and show it on the Day view. | It is the only way the six rows can pass as written. The other answer is to restate their Then or record an accepted exception, which is the owner's call. This one adds no table, and removing it is one revert. The owner confirms. |
+| Q1 | Confirmed by the owner on #386 ("its a yes", 2026-11-05). Is a typed shortage list wanted on the report at all (#279 Q4, #327 Q9)? | **Yes.** Store it, return it, and show it on the Day view. | It is the only way the six rows can pass as written. The other answer is to restate their Then or record an accepted exception, which is the owner's call. This one adds no table, and removing it is one revert. The owner confirms. |
 | Q2 | Where is it stored? | In **`mrp_run_exception`**, as **one `SHORTAGE` row per pair** with anything short, after the `BOM_REJECTIONS` rows, on the pair's first short day. Its `details` hold the pair's entries, in priority order, as one text, as `BOM_REJECTIONS` holds its list. | The table already holds a run's warnings (#285), provisional actions (#283) and rejected BOMs (#286) under codes the read tells apart. Its code is a plain string "so a code a later story adds needs no table rebuild" (#280 Q6). A new table would add a migration and touch every migration count (lesson 2026-10-23) for no gain. A row per entry was measured and rejected: at ten times the worst case it stored 162,586 rows, which added 2.7 s to the run and a 334 ms stall to the next run's delete. A row per pair keeps the run within about 5% of `main` (Q9). The rows cascade with the run, so a Test reset clears them. |
 | Q3 | What does a row hold? | Everything `MrpShortage` has: `kind`, `originalDate`, `required`, `uncovered`, `document` and `position` where the kind has them, and a planned component's `rootKind`. Quantities are six-decimal texts (R03). The root's date isn't stored: a planned component's `originalDate` is its root's (#327), so the read rebuilds `root` as `{ kind: rootKind, originalDate }`. | The issue asks for the kind, the order line or forecast, the original date, the uncovered quantity and the root. `required` costs one string, and it makes "8 short of 10" readable. |
 | Q4 | API shape? | Each plan of `GET …/mrp/runs/latest` gains `shortages: MrpShortageView[]`, in the engine's order: by day, then priority. It is always present, in both views, and empty when nothing is short. Weeks don't change. | It follows `exceptions` and `provisional`, which every plan carries. The day is on each entry, so a client groups the list as it likes. |
@@ -176,3 +176,12 @@ One phase, one PR: a vertical slice from the stored row to the screen, which onl
 - A read-only tenant reads them too. A Test reset clears them with the run, and a new run replaces them.
 - No figure, proposal, exception, mark or week of any existing test changes.
 - The six rows read Passed (automated). EN and PL copy, help included. 100% coverage of the change.
+
+## Implementation notes
+
+- **One row per pair, not per entry (Q2).** The first build stored one `SHORTAGE` row per entry. At ten times the worst case for proposals, that was 162,586 rows (108,476 of them planned components under provisional parents). Against `main` on the same machine, the run went from about 4.15 s to 6.9 s, and the stall from 271 to about 560 ms, most of it the next run's delete of 216,718 exception rows (334 ms). With one row per pair holding its entries as one text, the run measured 4,332 and 4,376 ms (stall 271 and 275 ms), and the other sizes stayed within about 5% of `main` (realistic 260 against 254 ms, ten times 2,820 against 2,700 ms). The Data Model above describes the shipped form.
+- **Positions start at 0.** A customer-order line's `position` is 0-based, as `INVALID_UOM_CONVERSION`'s `document` (`00000012/0`) shows. The reader accepts 0 and the API keeps the stored position, but the screen names the line from 1, as the order screens do ("Customer order 00000012, line 1", code review of #387). Purchase-order lines start at 1, so the marks are already right. Invalid UoM Conversion still names a customer-order line from 0, which is follow-up #390.
+- **Read guards (code review).** A pair's row replaces its empty list instead of spreading its entries into it, so a very long list can't exceed the call stack. An entry whose `uncovered` is above its `required` is left out (Q8).
+- **The column's width.** At its natural width every entry wrapped two or three times. The column has `min-w-80`, and the table scrolls in its own region, so nothing on the page scrolls sideways (`mrp-report.test.ts`, 1280 and 390 px).
+- **Q1** is confirmed: the owner answered yes on #386 (2026-11-05) and merged the spec.
+

@@ -229,6 +229,8 @@ describe("atomic Test reset", { timeout: 60_000 }, () => {
     await current.em.getConnection().execute(`insert into mrp_run_exception (id, tenant_code, run_id, position, exception_code, material, location, date, details)
       select 'x1', 'test', id, 1000000, 'MISSING_BOM', '00000001', '00000001', '2026-10-21', null from mrp_run where tenant_code = 'test' order by code desc limit 1`);
     expect((await testExceptions()).length).toBeGreaterThan(0);
+    // The realistic run leaves some requirements short after proposals, and stores them with the run (#380), so the reset clears those too.
+    expect((await testExceptions()).map(({ code }) => code)).toContain("SHORTAGE");
 
     await reset(2);
 

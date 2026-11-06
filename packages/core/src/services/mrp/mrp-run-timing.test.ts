@@ -278,10 +278,12 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     const atRisk = await count("select count(*) as n from mrp_run_exception where exception_code = 'AT_RISK_PRODUCTION'");
     // E18-S03: each fallback's rejected BOMs, one row per proposal that passed over a BOM.
     const rejections = await count("select count(*) as n from mrp_run_exception where exception_code = 'BOM_REJECTIONS'");
+    // #380: the pairs with ranked shortages, one row each, ranked while the run writes them, so the ranking is inside the measured run.
+    const shortages = await count("select count(*) as n from mrp_run_exception where exception_code = 'SHORTAGE'");
     const engine = await engineOnly();
     process.stdout.write(
       `MRP run, ${size.name} (${pairs} pairs, ${rows} daily rows, ${proposals} recommendations of which ${made} exploded, ${fallbacks} through a fallback BOM, ${provisional} No Feasible BOM, ` +
-        `${actions} provisional actions of which ${driven} for a provisional parent, ${atRisk} at-risk orders, ${rejections} fallbacks explained, ${exceptions} mrp_run_exception rows, ${lines} active BOM lines, ` +
+        `${actions} provisional actions of which ${driven} for a provisional parent, ${atRisk} at-risk orders, ${rejections} fallbacks explained, ${shortages} pairs with shortages, ${exceptions} mrp_run_exception rows, ${lines} active BOM lines, ` +
         `${size.lines} order lines, ${size.forecasts} forecasts, ` +
         `${size.orders + size.fullOrders} purchase orders with ${size.orders * ORDER_LINES + size.fullOrders * FULL_ORDER_LINES} lines, ${size.requisitions} requisitions, ` +
         `${size.productionOrders} production orders, ${size.transfers} transfers): ` +
@@ -300,6 +302,8 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     // Where demand outruns the stock and receipts, the run proposes (#278), and explodes its Make proposals (#281), executable or provisional (#283).
     expect(proposals).toBeGreaterThan(0);
     expect(made + actions).toBeGreaterThan(0);
+    // Provisional output counts in no balance, so some requirements stay short after proposals: the run ranked and stored them (#380).
+    expect(shortages).toBeGreaterThan(0);
     // The fixture's BOMs are acyclic, valid and usable, and every component has its parameters but the unplanned parts, which
     // never fall short (#376): no pair is stopped (#280, #281, #282). Counted by the codes meant, since the table also holds
     // transfers' and feasibility's exceptions and the warnings.
@@ -423,7 +427,7 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     const proposals = recommendations + infeasible;
     const exceptions = await count("select count(*) as n from mrp_run_exception");
     process.stdout.write(
-      `MRP run, worst case for proposals, ${size.name} (${rows} daily rows, ${recommendations} recommendations and ${infeasible} infeasible Make proposals, ${exceptions} mrp_run_exception rows, ${size.lines + size.materials * days} order lines): ` +
+      `MRP run, worst case for proposals, ${size.name} (${rows} daily rows, ${recommendations} recommendations and ${infeasible} infeasible Make proposals, ${await count("select count(*) as n from mrp_run_exception where exception_code = 'SHORTAGE'")} pairs with shortages, ${exceptions} mrp_run_exception rows, ${size.lines + size.materials * days} order lines): ` +
         `${fastest.toFixed(0)} ms fastest of ${RUNS}, longest event-loop stall ${longestStall.toFixed(0)} ms, planMrp alone ${(await engineOnly()).toFixed(0)} ms\n`,
     );
     // Every day but, for some materials, today: overdue purchase-order lines all land today and can cover it.

@@ -1795,6 +1795,17 @@ describe("planMrp: planning exceptions (E16-S03, #280)", () => {
     expect(ofB(result)).toEqual(ofB(alone));
   });
 
+  it("#380 Q11: ranks no shortage for a material with an unreadable row, though its balance is short, and still ranks the others'", () => {
+    const shortOrder = (material: string) => line({ material, quantity: q("3"), requiredDate: DAY });
+    const unreadable = [{ material: "A", location: "L3", record: "customer-order-line" as const, document: "00000007/1" }];
+    const result = planMrp(inputs({ orderLines: [shortOrder("A"), shortOrder("B")], unreadable }), TODAY);
+    expect(bucketOf(planAt(result.plans, "A"), DAY)).toMatchObject({ projectedAfter: -q("3") });
+    expect(result.plans.filter(({ material }) => material === "A").flatMap(({ shortages }) => shortages)).toEqual([]);
+    expect(planAt(result.plans, "B").shortages.map(({ kind, uncovered }) => [kind, uncovered])).toEqual([["customer-order", q("3")]]);
+    // The same order of A without the unreadable row is short and ranked.
+    expect(planAt(planMrp(inputs({ orderLines: [shortOrder("A")] }), TODAY).plans, "A").shortages).toHaveLength(1);
+  });
+
   it("flags the material at a transfer's destination too when its source's stock row is unreadable, so neither site gets a guessed proposal", () => {
     const result = planMrp(
       inputs({

@@ -310,8 +310,8 @@ describe("the MRP report in the UI", () => {
         await rita.setViewport(width, height);
         await open(`?material=${ids.sheet}&location=${ids.plant}`, DAYS);
         expect(await rita.evaluate<boolean>(`document.documentElement.scrollWidth <= innerWidth`), `${width} px`).toBe(true);
-        // Twelve figures since E18-S03's At-risk supply, beside the date and the warnings.
-        expect(await rita.evaluate<number>(`${shown(DAYS)}.querySelectorAll("thead th").length`)).toBe(14);
+        // Twelve figures since E18-S03's At-risk supply, beside the date, the warnings and, since #380, the short requirements.
+        expect(await rita.evaluate<number>(`${shown(DAYS)}.querySelectorAll("thead th").length`)).toBe(15);
         await open(`?material=${ids.sheet}&location=${ids.plant}&bucket=week`, WEEKS);
         expect(await rita.evaluate<boolean>(`document.documentElement.scrollWidth <= innerWidth`), `${width} px, by week`).toBe(true);
       }
@@ -397,7 +397,7 @@ describe("the MRP report in the UI", () => {
       expect(await rita.evaluate<boolean>(`Boolean(document.querySelector("[data-slot=sidebar][data-state=expanded]"))`)).toBe(true);
       // The table is still wider than its region, so this proves the pinning, not a table that fits.
       expect(await rita.evaluate<boolean>(`(() => { const region = ${shown(DAYS)}.closest("[data-slot=table-container]"); return region.scrollWidth > region.clientWidth; })()`)).toBe(true);
-      await expectPinned(DAYS, ["projectedBefore", "shortage"], 9, ["Projected after proposals", "Warnings"], "day");
+      await expectPinned(DAYS, ["projectedBefore", "shortage"], 9, ["Projected after proposals", "Warnings", "Short requirements"], "day");
       // Spec Q2: the week's lowest balance and peak shortage, pinned the same way.
       await open(`?material=${ids.sheet}&location=${ids.plant}&bucket=week`, WEEKS);
       await expectPinned(WEEKS, ["lowestProjectedBefore", "peakShortage"], 11, ["Warnings"], "week");
@@ -408,7 +408,7 @@ describe("the MRP report in the UI", () => {
       await closeAccountMenu(rita);
       const dni = "table[aria-label='Dni planu']";
       await open(`?material=${ids.sheet}&location=${ids.plant}`, dni);
-      await expectPinned(dni, ["projectedBefore", "shortage"], 9, ["Prognozowany stan po propozycjach", "Ostrzeżenia"], "day, Polish");
+      await expectPinned(dni, ["projectedBefore", "shortage"], 9, ["Prognozowany stan po propozycjach", "Ostrzeżenia", "Niepokryte potrzeby"], "day, Polish");
 
       // Spec Q3: at 390 px only the date sticks, so the figures keep the region's width to scroll in.
       await rita.setViewport(390, 844);

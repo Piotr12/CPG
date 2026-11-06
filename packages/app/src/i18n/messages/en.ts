@@ -2074,7 +2074,7 @@ export const en = {
       pagination: "MRP report pages", previous: "Previous", next: "Next", page: "Page {page} of {pages}",
       plan: "{material} at {location}",
       excess: "Excess: {quantity} {unit} of open supply that the demand and safety stock of the next 90 days don't need. MRP never cancels, reduces or moves a document.",
-      planIntro: "Quantities in {unit}. Each balance is at the end of its day; a negative balance is a shortage to plan for, not a change to stock.",
+      planIntro: "Quantities in {unit}. Each balance is at the end of its day; a negative balance is a shortage to plan for, not a change to stock. Short requirements lists what is still uncovered after proposals, in the order MRP serves it.",
       planLabel: "Days of the plan",
       view: "View", viewHint: "Week groups one pair's days into ISO weeks.", buckets: { day: "Day", week: "Week" },
       weekPlan: "{material} at {location}, by week",
@@ -2083,6 +2083,29 @@ export const en = {
       weekTitle: "W{week} · {date}", partial: "{range}, partial",
       weekFigures: { week: "Week", lowestProjectedBefore: "Lowest projected balance", peakShortage: "Peak shortage" },
       warnings: "Warnings",
+      /**
+       * A day's requirements left uncovered after proposals, in priority order (#380): what each is, by kind, and how much of it
+       * is short. `{uncovered}` and `{required}` carry their unit; a planned component names its parent and its root's priority.
+       */
+      shortages: {
+        heading: "Short requirements",
+        line: "{requirement} · {uncovered} short of {required}",
+        kinds: {
+          component: "Production order {document} · start {date}",
+          transfer: "Transfer {document} · dispatch {date}",
+          "customer-order": "Customer order {document}, line {line} · due {date}",
+          "planned-component": "Proposed production of {document} · {root}",
+          forecast: "Forecast · {date}",
+          "safety-target": "Safety stock",
+        },
+        roots: {
+          component: "for production orders starting {date}",
+          transfer: "for transfers dispatched {date}",
+          "customer-order": "for customer orders due {date}",
+          forecast: "for the forecast of {date}",
+          "safety-target": "for safety stock",
+        },
+      },
       /** One mark per overdue, late or beyond-horizon date (E18-S02); `{quantity}` carries its unit. */
       marks: {
         overdueSupply: "Overdue · {document} · due {date} · {quantity}",
