@@ -14,7 +14,7 @@ import { materialsByCode } from "./mrp-bom-rejections";
 import { MrpExplanations } from "./mrp-explanations";
 import { MrpMarks, shortDate } from "./mrp-marks";
 import { MrpProposals } from "./mrp-proposals";
-import { MrpShortages } from "./mrp-shortages";
+import { MrpShortages, shortagesByDate } from "./mrp-shortages";
 
 interface MrpReportProps {
   tenant: { code: string };
@@ -189,6 +189,8 @@ function PlanDays({ plan, locale, labels: t }: { plan: MrpPlanView; locale: Loca
     pin: PINNED_DAY_FIGURES.has(key) ? "end" : undefined,
     cell: (day) => <span data-mrp-figure={key} className={cn(negative(day[key]) && "font-medium text-danger")}>{localeQuantity(day[key], locale)}</span>,
   });
+  // Grouped once, not filtered once per day (#391).
+  const shortages = shortagesByDate(plan.shortages);
   const columns: DataTableColumn<MrpBucketView>[] = [
     { id: "date", header: t.figures.date, kind: "date", cell: (day) => <span data-mrp-date>{day.date}</span> },
     ...DAY_FIGURES.map(figure),
@@ -199,7 +201,7 @@ function PlanDays({ plan, locale, labels: t }: { plan: MrpPlanView; locale: Loca
     // After Warnings, so every column before it keeps its place (#380 spec Q5, lesson 2026-11-01).
     // Wide enough that an entry reads on a line or two; the table scrolls in its own region anyway (#311).
     { id: "shortages", header: t.shortages.heading, kind: "text", className: "min-w-80 whitespace-normal", cell: (day) => (
-      <MrpShortages shortages={plan.shortages.filter(({ date }) => date === day.date)} unit={plan.baseUnit} locale={locale} labels={t.shortages} />
+      <MrpShortages shortages={shortages.get(day.date) ?? []} unit={plan.baseUnit} locale={locale} labels={t.shortages} />
     ) },
   ];
   return (
