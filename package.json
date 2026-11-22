@@ -19,7 +19,8 @@
     "test:coverage": "vitest run --coverage",
     "test:integration": "vitest run --config vitest.integration.config.mts",
     "db:migrate": "npm run migrate -w @cpg/core",
-    "db:migration:create": "npm run migration:create -w @cpg/core"
+    "db:migration:create": "npm run migration:create -w @cpg/core",
+    "mcp:catalogue": "tsx packages/app/scripts/mcp-catalogue.ts"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4.3.3",
