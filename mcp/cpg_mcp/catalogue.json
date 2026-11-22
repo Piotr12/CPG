@@ -1,5 +1,5 @@
 {
-  "generatedFrom": "a7a2e9e963f819522e4c7e87e2b76caef9cc3d355453f378e48b92f35f24505e",
+  "generatedFrom": "96bb850f417071dd3f606644e38d52a3b0318cb4e2348f18f67e90bd66933758",
   "operations": [
     {
       "id": "me.get",
@@ -1305,7 +1305,7 @@
       ],
       "role": "admin",
       "write": "tenant",
-      "summary": "Revises a BOM (priority, validity, components, active) at the version read; the output never changes.",
+      "summary": "Revises a BOM at the version read; components, when sent, is the complete list, and the output never changes.",
       "body": {
         "type": "object",
         "properties": {
@@ -1651,7 +1651,7 @@
       ],
       "role": "any",
       "write": "tenant",
-      "summary": "Edits an Open customer order's header or lines at the version read.",
+      "summary": "Replaces an Open order's header and its complete line list at the version read; an unposted line left out is removed.",
       "body": {
         "type": "object",
         "properties": {
@@ -1893,7 +1893,7 @@
       ],
       "role": "any",
       "write": "tenant",
-      "summary": "Edits a planned shipment at the version read.",
+      "summary": "Replaces an Open shipment's plan at the version read: lines is the complete list, and a line left out is removed.",
       "body": {
         "type": "object",
         "properties": {
@@ -2203,7 +2203,7 @@
       ],
       "role": "any",
       "write": "tenant",
-      "summary": "Cancels an Open requisition at the version read.",
+      "summary": "Cancels an unprocessed requisition at the version read.",
       "body": {
         "type": "object",
         "properties": {
@@ -3122,7 +3122,7 @@
       ],
       "role": "any",
       "write": "tenant",
-      "summary": "Cancels an undispatched transfer at the version read.",
+      "summary": "Cancels a transfer with no posting, even a reversed one, at the version read.",
       "body": {
         "type": "object",
         "properties": {
@@ -3381,7 +3381,7 @@
       ],
       "role": "any",
       "write": "tenant",
-      "summary": "Reverses a whole stock movement today, with a reason.",
+      "summary": "Reverses a goods receipt, goods issue or correction movement today, with a reason; completions and transfers have their own.",
       "body": {
         "type": "object",
         "properties": {
@@ -3646,10 +3646,6 @@
             "maximum": 20
           }
         },
-        "required": [
-          "material",
-          "location"
-        ],
         "additionalProperties": false
       }
     },

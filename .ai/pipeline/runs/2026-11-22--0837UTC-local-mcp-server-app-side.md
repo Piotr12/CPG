@@ -38,7 +38,8 @@ Ship the spec's Phase 1 on its own PR, as the spec's Implementation Plan says: `
 ## Risks
 
 - The registry is hand-maintained; the parity test proves the schema is on the request's path, not that it is the only parse (spec step 3's stated limit).
-- Zod patterns use `\p{L}` (Unicode property escapes). Python's `re` can't compile them, so Phase 2's argument validator must account for it. Recorded for Phase 2, not handled here.
+- Zod patterns use `\p{L}`/`\p{N}` (Unicode property escapes, 22 unit fields in the catalogue). Python's `re` rejects them ("bad escape \p"), and `jsonschema`'s `pattern` uses `re`. Decision for Phase 2: validate `pattern` with the `regex` package, which supports them; the catalogue stays standard (ECMA-262) JSON Schema.
+- Two bodies are a top-level `anyOf` with `null` (`mrp.runs.create`, `mrp.proposals.accept`); an MCP tool's input schema must be an object, so Phase 2's tools compose their own object schema around them.
 
 ## Decisions and deviations
 
@@ -58,6 +59,11 @@ PR: #402
 - [x] 1.2 toToolJsonSchema and the operation registry — 18d4852a
 - [x] 1.3 Route and registry parity test — f76e8644
 - [x] 1.4 Catalogue builder, script, committed catalogue and drift test — d5c925ce, 2e2caa54
+
+## Review (om-auto-review-pr, independent subagent reviewer)
+
+- No blockers; four majors, all fixed: six summaries stated wrong rules (customer-order and shipment updates replace the whole line list; BOM components is the complete list; stock-movement reversal covers receipts, issues and corrections only; transfer and requisition cancel); the demand review's query listed `material`/`location` as required (a `z.preprocess` default), now `toToolJsonSchema` drops `required` from a schema that accepts `{}`; seven routes that hand `body`/`searchParams` to a service could lose their schema unnoticed, now a handler reading either must name one; the `\p{L}` patterns, decided above.
+- Minors fixed: comments are stripped and file helpers count for every handler in the route walk; `export { h as POST }` and `export let` are refused; a described `z.never()` is dropped too; the catalogue is asserted free of `not`, `$ref` and `$defs`.
 
 ## Verification
 

@@ -259,7 +259,7 @@ export const API_OPERATIONS: readonly ApiOperation[] = [
   read("boms.list", `${T}/boms`, "Lists the tenant's BOMs, narrowed by q and sorted by sort/dir.", { query: bomApiQuerySchema }),
   adminTenantWrite("boms.create", "POST", `${T}/boms`, "Creates a BOM: an output, its priority, validity dates and components.", { body: bomCreateBodySchema }),
   read("boms.get", `${T}/boms/{id}`, "One BOM at its current revision."),
-  adminTenantWrite("boms.update", "PATCH", `${T}/boms/{id}`, "Revises a BOM (priority, validity, components, active) at the version read; the output never changes.", {
+  adminTenantWrite("boms.update", "PATCH", `${T}/boms/{id}`, "Revises a BOM at the version read; components, when sent, is the complete list, and the output never changes.", {
     body: bomUpdateBodySchema,
   }),
   read("boms.revision", `${T}/boms/{id}/revisions/{revision}`, "One earlier revision of a BOM, by its number from 1."),
@@ -280,7 +280,7 @@ export const API_OPERATIONS: readonly ApiOperation[] = [
     body: customerOrderCreateSchema,
   }),
   read("customer-orders.get", `${T}/customer-orders/{id}`, "One customer order with its lines, outstanding quantities and shipments."),
-  tenantWrite("customer-orders.update", "PATCH", `${T}/customer-orders/{id}`, "Edits an Open customer order's header or lines at the version read.", {
+  tenantWrite("customer-orders.update", "PATCH", `${T}/customer-orders/{id}`, "Replaces an Open order's header and its complete line list at the version read; an unposted line left out is removed.", {
     body: customerOrderUpdateSchema,
   }),
   tenantWrite("customer-orders.cancel", "POST", `${T}/customer-orders/{id}/cancel`, "Cancels an unprocessed customer order, or the listed lines, at the version read.", {
@@ -292,7 +292,7 @@ export const API_OPERATIONS: readonly ApiOperation[] = [
   read("shipments.list", `${T}/shipments`, "Lists the shipments, narrowed to a customer order, a page at a time.", { query: shipmentListQuerySchema }),
   tenantWrite("shipments.create", "POST", `${T}/shipments`, "Plans a shipment of a customer order's lines on a date.", { body: shipmentCreateSchema }),
   read("shipments.get", `${T}/shipments/{id}`, "One shipment with its lines and goods issues."),
-  tenantWrite("shipments.update", "PATCH", `${T}/shipments/{id}`, "Edits a planned shipment at the version read.", { body: shipmentUpdateSchema }),
+  tenantWrite("shipments.update", "PATCH", `${T}/shipments/{id}`, "Replaces an Open shipment's plan at the version read: lines is the complete list, and a line left out is removed.", { body: shipmentUpdateSchema }),
   tenantWrite("shipments.cancel", "POST", `${T}/shipments/{id}/cancel`, "Cancels a shipment nothing was issued against, at the version read.", { body: documentLifecycleSchema }),
   read("goods-issues.list", `${T}/goods-issues`, "Lists the goods issues, narrowed to a shipment, a page at a time.", { query: issueListQuerySchema }),
   tenantWrite("goods-issues.create", "POST", `${T}/goods-issues`, "Posts a goods issue against a shipment: stock leaves and the order lines are fulfilled. No negative stock (R09).", {
@@ -311,7 +311,7 @@ export const API_OPERATIONS: readonly ApiOperation[] = [
   tenantWrite("purchase-requisitions.update", "PATCH", `${T}/purchase-requisitions/{id}`, "Changes a requisition's required date at the version read; nothing else changes.", {
     body: requisitionUpdateBodySchema,
   }),
-  tenantWrite("purchase-requisitions.cancel", "POST", `${T}/purchase-requisitions/{id}/cancel`, "Cancels an Open requisition at the version read.", { body: documentLifecycleSchema }),
+  tenantWrite("purchase-requisitions.cancel", "POST", `${T}/purchase-requisitions/{id}/cancel`, "Cancels an unprocessed requisition at the version read.", { body: documentLifecycleSchema }),
   tenantWrite("purchase-requisitions.close-early", "POST", `${T}/purchase-requisitions/{id}/close-early`, "Closes a requisition early at the version read.", {
     body: documentLifecycleSchema,
   }),
@@ -371,7 +371,7 @@ export const API_OPERATIONS: readonly ApiOperation[] = [
   tenantWrite("transfers.create", "POST", `${T}/transfers`, "Plans a transfer of a material from one location to another.", { body: transferCreateSchema }),
   read("transfers.get", `${T}/transfers/{id}`, "One transfer with its dispatched, received and written-off quantities and postings."),
   tenantWrite("transfers.update", "PATCH", `${T}/transfers/{id}`, "Changes a transfer's planned dispatch and arrival dates at the version read.", { body: transferUpdateBodySchema }),
-  tenantWrite("transfers.cancel", "POST", `${T}/transfers/{id}/cancel`, "Cancels an undispatched transfer at the version read.", { body: documentLifecycleSchema }),
+  tenantWrite("transfers.cancel", "POST", `${T}/transfers/{id}/cancel`, "Cancels a transfer with no posting, even a reversed one, at the version read.", { body: documentLifecycleSchema }),
   tenantWrite("transfers.close-early", "POST", `${T}/transfers/{id}/close-early`, "Abandons a transfer's remainder at the version read.", { body: documentLifecycleSchema }),
   tenantWrite("transfers.dispatch", "POST", `${T}/transfers/{id}/dispatches`, "Dispatches a quantity: stock leaves the origin and is in transit. No negative stock (R09).", {
     body: transferPostingSchema,
@@ -388,7 +388,7 @@ export const API_OPERATIONS: readonly ApiOperation[] = [
     body: stockCorrectionSchema,
   }),
   read("stock-movements.get", `${T}/stock/movements/{id}`, "One stock movement."),
-  tenantWrite("stock-movements.reverse", "POST", `${T}/stock/movements/{id}/reverse`, "Reverses a whole stock movement today, with a reason.", { body: stockReversalSchema }),
+  tenantWrite("stock-movements.reverse", "POST", `${T}/stock/movements/{id}/reverse`, "Reverses a goods receipt, goods issue or correction movement today, with a reason; completions and transfers have their own.", { body: stockReversalSchema }),
   tenantWrite("stock-import.dry-run", "POST", `${T}/stock-import/dry-run`, "Checks a base64 stock workbook and answers what it would post, with a preview token. Posts nothing.", {
     body: stockImportDryRunSchema,
   }),

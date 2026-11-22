@@ -32,6 +32,30 @@ describe("buildCatalogue", () => {
     expect(operations.filter(({ body, query }) => [body, query].some((schema) => schema && Object.keys(schema).length === 0))).toEqual([]);
   });
 
+  it("leaves no refused field, reference or definition in any schema, which a tool's schema couldn't carry", () => {
+    const keys = new Set<string>();
+    const walk = (node: unknown): void => {
+      if (Array.isArray(node)) node.forEach(walk);
+      else if (typeof node === "object" && node !== null) {
+        for (const [name, value] of Object.entries(node)) {
+          keys.add(name);
+          if (name !== "properties") walk(value);
+          else Object.values(value as object).forEach(walk);
+        }
+      }
+    };
+    buildCatalogue().operations.forEach(({ body, query }) => [body, query].forEach(walk));
+
+    expect([...keys].filter((name) => ["not", "$ref", "$defs", "definitions"].includes(name))).toEqual([]);
+  });
+
+  it("requires no field of a query the server accepts empty, such as the demand review's", () => {
+    const entries = buildCatalogue().operations.filter(({ id }) => API_OPERATIONS.find((operation) => operation.id === id)?.query?.safeParse({}).success);
+
+    expect(entries.map(({ id }) => id)).toContain("reports.demand-review");
+    expect(entries.filter(({ query }) => query?.required)).toEqual([]);
+  });
+
   it("describes an operation's path parameters, write contract and schemas", () => {
     const [entry] = buildCatalogue([operation({ body: z.strictObject({ version: z.number().int() }) })]).operations;
 

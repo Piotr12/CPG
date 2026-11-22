@@ -42,6 +42,22 @@ describe("toToolJsonSchema", () => {
     expect(line.properties).toHaveProperty("line");
   });
 
+  it("drops a described refused field too", () => {
+    const json = toToolJsonSchema(z.object({ keep: z.string(), gone: z.never().optional().describe("Never.") }));
+
+    expect(json.properties).toEqual({ keep: { type: "string" } });
+    expect(json.description).toBe(refusedFieldsNote(["gone"]));
+  });
+
+  it("requires nothing of a schema that accepts an empty object, whatever a preprocess renders", () => {
+    const filled = z.preprocess((value) => value ?? [], z.array(z.string()));
+    const query = z.strictObject({ material: filled, page: z.number().optional() });
+
+    expect(query.safeParse({}).success).toBe(true);
+    expect(toToolJsonSchema(query)).not.toHaveProperty("required");
+    expect(toToolJsonSchema(z.strictObject({ material: z.array(z.string()) })).required).toEqual(["material"]);
+  });
+
   it("keeps an existing description, and removes a refused field from required", () => {
     const schema = z.object({ keep: z.string(), gone: z.never() }).describe("A body.");
 

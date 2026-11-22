@@ -3,9 +3,16 @@ import { z } from "zod";
 /** A JSON Schema document, as `z.toJSONSchema` returns it, without the `$schema` dialect line. */
 export type ToolJsonSchema = { [key: string]: unknown };
 
-/** What `z.toJSONSchema` makes of a refused field, `z.never().optional()` (lesson 2026-10-20). */
+/**
+ * What `z.toJSONSchema` makes of a refused field, `z.never().optional()` (lesson 2026-10-20): `not: {}`, with the
+ * field's description when it has one.
+ */
 const isRefused = (value: unknown) =>
-  typeof value === "object" && value !== null && "not" in value && Object.keys(value).length === 1 && isEmptyObject(value.not);
+  typeof value === "object" &&
+  value !== null &&
+  "not" in value &&
+  isEmptyObject(value.not) &&
+  Object.keys(value).every((key) => key === "not" || key === "description");
 
 const isEmptyObject = (value: unknown) => typeof value === "object" && value !== null && !Array.isArray(value) && Object.keys(value).length === 0;
 
@@ -17,11 +24,14 @@ export const refusedFieldsNote = (fields: string[]) => `Never send: ${fields.joi
  * Architecture): what a client sends (`io: "input"`, so decimal strings and dates before their transforms),
  * failing on anything JSON Schema can't express rather than advertising `{}`. A refused field renders as
  * `not: {}`, which tells a model nothing, so it is dropped and named in its object's description instead
- * (A10). Refinements don't appear: the server's validation stays the authority.
+ * (A10). A schema that accepts an empty object requires nothing: a `z.preprocess` that fills an absent field in
+ * renders its inner schema, which would otherwise list the field as required (the demand review's `material`).
+ * Refinements don't appear: the server's validation stays the authority.
  */
 export function toToolJsonSchema(schema: z.ZodType): ToolJsonSchema {
   const json: ToolJsonSchema = { ...z.toJSONSchema(schema, { io: "input", unrepresentable: "throw" }) };
   delete json.$schema;
+  if (schema.safeParse({}).success) delete json.required;
   return withoutRefusedFields(json) as ToolJsonSchema;
 }
 

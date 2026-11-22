@@ -29,13 +29,24 @@ function apiPathOf(file: string): string {
   return ["/api", ...segments.map((segment) => segment.replace(/^\[(\w+)\]$/, "{$1}"))].join("/");
 }
 
-const EXPORT = /^export\s+(?:const|async\s+function|function)\s+(GET|POST|PATCH|PUT|DELETE)\b/;
+const METHOD = "GET|POST|PATCH|PUT|DELETE";
+const EXPORT = new RegExp(`^export\\s+(?:const|async\\s+function|function)\\s+(${METHOD})\\b`);
+/** Method exports this walk can't read: `export { handler as POST }`, `export let GET`. Routes must not use them. */
+const UNREADABLE_EXPORT = new RegExp(`export\\s*\\{[^}]*\\bas\\s+(?:${METHOD})\\b|export\\s+(?:let|var)\\s+(?:${METHOD})\\b`);
 
-/** Each exported method of a route source, with its code: from its `export` to the next top-level `export`. */
+/** A source without its comments, so a doc comment never reads as code. */
+const withoutComments = (source: string) => source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+
+/**
+ * Each exported method of a route source, with its code: its own top-level statement plus the file's helpers
+ * (every other top-level statement but imports and exports), which any handler may call.
+ */
 function handlers(source: string): { method: string; code: string }[] {
-  return source.split(/^(?=export\s)/m).flatMap((chunk) => {
-    const method = chunk.match(EXPORT)?.[1];
-    return method ? [{ method, code: chunk }] : [];
+  const statements = withoutComments(source).split(/^(?=[A-Za-z])/m);
+  const helpers = statements.filter((statement) => !/^(?:import|export)\b/.test(statement)).join("");
+  return statements.flatMap((statement) => {
+    const method = statement.match(EXPORT)?.[1];
+    return method ? [{ method, code: statement + helpers }] : [];
   });
 }
 
@@ -115,6 +126,22 @@ describe("the API operation registry", () => {
     expect(wrong.map(key)).toEqual([]);
   });
 
+  it("exports every route method in a form this walk reads", () => {
+    const sources = files(apiDir, (name) => name === "route.ts").filter((file) => UNREADABLE_EXPORT.test(withoutComments(read(file))));
+    expect(sources.map((file) => path.relative(apiDir, file))).toEqual([]);
+  });
+
+  it("gives a query schema to every handler that reads the query string, and a body schema to every write that reads the body", () => {
+    const missing = described().flatMap((handler) => {
+      const { body, query } = entryOf(handler);
+      return [
+        ...(/\bsearchParams\b/.test(handler.code) && !query ? [`${key(handler)}: query`] : []),
+        ...(/\bbody\b/.test(handler.code) && !body ? [`${key(handler)}: body`] : []),
+      ];
+    });
+    expect(missing).toEqual([]);
+  });
+
   it("names every schema a handler parses its body or query with", () => {
     const missing = described().flatMap((handler) => {
       const { body, query } = entryOf(handler);
@@ -153,5 +180,22 @@ describe("the API operation registry", () => {
     expect(roleOf("export const POST = testResetApiWrite(handler);")).toBe("admin");
     expect([...parsedSchemas(get.code), ...parsedSchemas(patch.code)]).toEqual(["listSchema", "updateSchema"]);
     expect(parsedSchemas("parseInput(tenantCodeSchema, (await params).tenant)")).toEqual([]);
+
+    const helped = handlers(
+      [
+        "/** Admin only: assertAdmin( in a comment is not code. */",
+        "const check = apiHandler(async (r) => assertAdmin(await requireApiUser(r)));",
+        "export async function GET(request) { return check(request); }",
+        "// export const POST = apiWrite(x);",
+        "export const PUT = apiWrite(async ({ caller }) => caller);",
+        "function keyOf() {}",
+      ].join("\n"),
+    );
+    expect(helped.map(({ method }) => method)).toEqual(["GET", "PUT"]);
+    expect(roleOf(helped[0].code)).toBe("admin");
+    expect(helped[1].code).toContain("function keyOf()");
+    expect(UNREADABLE_EXPORT.test("const h = apiWrite(x);\nexport { h as POST };")).toBe(true);
+    expect(UNREADABLE_EXPORT.test("export let GET = apiHandler(x);")).toBe(true);
+    expect(UNREADABLE_EXPORT.test("export const GET = apiHandler(x);")).toBe(false);
   });
 });
