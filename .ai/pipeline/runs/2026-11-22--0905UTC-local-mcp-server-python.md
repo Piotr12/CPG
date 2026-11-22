@@ -67,6 +67,25 @@ A local stdio MCP server, `mcp/` (`cpg-mcp`), that gives an agent CPG's whole AP
 - `ruff` S105 flagged constants named `TOKEN_HINT`/`PASSWORD_NOTE` (false positives); they were renamed `ACCESS_HINT`/`CREDENTIAL_NOTE` rather than suppressed.
 - The manual run (step 4.4) needed a token. The integration helpers import Vitest, so `agent-browser` was driven directly to create one on `/admin/tokens`.
 
+## Review (om-auto-review-pr, independent subagent reviewer)
+
+- No blockers. The reviewer probed all 103 tool, action and variant combinations against the catalogue, and each sent the right operation and path with nothing leaking into the body.
+- One major, fixed: with the flat union schema, a field of another action got through. `cpg_save_material action=create active=false` sent `active`, which the lenient create schema drops; `q` outside `cpg_list`'s `query` listed everything.
+  - Now `ActionTool.run` refuses any argument the chosen operation doesn't take ("Not accepted by action=create").
+  - Every call is validated against the tool's advertised schema first, since `mcp` 2.3 validates input only on the HTTP transport.
+- Minors fixed:
+  - an action's "Never send: …" note and its optional fields are in the description;
+  - a write that gets 502/503/504 twice is reported as possibly applied, with its key;
+  - the client pauses 1 s before its one retry;
+  - an object or array sent as a JSON string is decoded;
+  - a merged field keeps its shared `type`;
+  - the Codex snippet sets `startup_timeout_sec` and `tool_timeout_sec`;
+  - a stale generation is forgotten (re-read by the next write) rather than refreshed inside the error path;
+  - `CPG_BASE_URL` credentials are masked in the startup error;
+  - `cpg_preferences` has annotations.
+- New tests: 4xx never retried, write same-key retry after a 502, the stale generation's new value sent next, the stray-field cases, and a Prod-warning test that picks tools from the catalogue rather than from the built schema.
+- Not changed: startup calls `/api/me` only (`cpg_whoami` reads `/api/tenants` when asked); the remaining nits are cosmetic.
+
 ## Progress
 
 PR: #403

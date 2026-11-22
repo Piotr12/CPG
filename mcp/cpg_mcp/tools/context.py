@@ -86,7 +86,9 @@ class Preferences(Tool):
         body = ctx.catalogue.operation("preferences.update").body or {}
         description = "The caller's own language and theme. Without arguments it reads them; with either, it changes only what you send."
         schema = {"type": "object", "properties": dict(body.get("properties", {})), "additionalProperties": False}
-        return types.Tool(name=self.name, description=description, input_schema=schema)
+        return types.Tool(
+            name=self.name, description=description, input_schema=schema, annotations=types.ToolAnnotations(read_only_hint=False)
+        )
 
     async def run(self, args: Mapping[str, Any], ctx: ToolContext) -> Any:
         changes = {name: value for name, value in args.items() if value is not None}

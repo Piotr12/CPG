@@ -13,7 +13,7 @@ from mcp.client import Client
 from cpg_mcp.catalogue import Catalogue
 from cpg_mcp.client import CpgClient
 from cpg_mcp.config import Config
-from cpg_mcp.server import INSTRUCTIONS, CpgServer, StartupError, serve, start
+from cpg_mcp.server import INSTRUCTIONS, CpgServer, StartupError, decoded_arguments, serve, start, without_credentials
 from cpg_mcp.tools.base import Tool, ToolContext
 from tests.conftest import ADMIN, TOKEN, USER, ok, refused
 
@@ -162,7 +162,51 @@ async def test_serves_over_the_given_streams_until_the_client_leaves(api: respx.
 
 
 def test_a_context_defaults_to_a_user_when_me_has_no_role(catalogue: Catalogue, config: Config) -> None:
-    ctx = ToolContext(client=CpgClient(config), catalogue=catalogue, config=config)
+    ctx = ToolContext(client=CpgClient(config, retry_delay=0), catalogue=catalogue, config=config)
 
     assert ctx.role == "user"
     assert not ctx.allowed("users.list")
+
+
+async def test_checks_arguments_against_the_tools_schema_before_running_it(api: respx.MockRouter, context: Context) -> None:
+    async with Client(CpgServer(context()).build()) as client:
+        result = await client.call_tool("cpg_get", {"entity": "materials", "id": "00000001", "tenant": "PROD"})
+
+    assert result.is_error is True
+    error = text_of(result)
+    assert error["code"] == "VALIDATION_FAILED"
+    assert list(error["fieldErrors"]) == ["tenant"]
+    assert not api.calls
+
+
+async def test_decodes_an_object_a_client_sent_as_a_json_string(api: respx.MockRouter, context: Context) -> None:
+    route = api.get("/api/tenants/test/materials").respond(json=ok([]))
+
+    async with Client(CpgServer(context()).build()) as client:
+        result = await client.call_tool("cpg_list", {"entity": "materials", "query": '{"q": "steel"}'})
+
+    assert result.is_error is False
+    assert route.calls.last.request.url.params["q"] == "steel"
+
+
+def test_leaves_a_string_that_is_not_json_for_the_schema_to_refuse() -> None:
+    schema = {"type": "object", "properties": {"query": {"type": "object"}, "id": {"type": "string"}}}
+
+    assert decoded_arguments(schema, {"query": "q=steel", "id": "[1]"}) == {"query": "q=steel", "id": "[1]"}
+    assert decoded_arguments(schema, {"query": "{}", "other": "{}"}) == {"query": {}, "other": "{}"}
+
+
+def test_prints_a_base_url_without_its_credentials() -> None:
+    assert without_credentials("https://user:secret@cpg.example:8443/x") == "https://cpg.example:8443/x"
+    assert without_credentials("https://cpg.baby") == "https://cpg.baby"
+    assert without_credentials("http://") == "http://"
+
+
+async def test_never_prints_credentials_in_the_base_url(api: respx.MockRouter, config: Config) -> None:
+    with respx.mock(assert_all_called=False) as router:
+        router.get("https://cpg.test/api/me").respond(401, json=refused("UNAUTHORIZED", "Invalid or revoked token."))
+        with pytest.raises(StartupError) as raised:
+            await start(Config(base_url="https://user:pa55@cpg.test", token=TOKEN, tenant="test"))
+
+    assert "pa55" not in str(raised.value)
+    assert "CPG_BASE_URL=https://cpg.test)" in str(raised.value)

@@ -25,6 +25,9 @@ claude mcp add cpg -e CPG_API_TOKEN=cpg_… -- uvx --from "git+https://github.co
 command = "uvx"
 args = ["--from", "git+https://github.com/Piotr12/CPG#subdirectory=mcp", "cpg-mcp"]
 env = { CPG_API_TOKEN = "cpg_…" }
+# The first start fetches and builds the server, and an automatic MRP run can take a minute or two.
+startup_timeout_sec = 60
+tool_timeout_sec = 300
 ```
 
 **Other MCP clients** (the common `mcpServers` JSON)

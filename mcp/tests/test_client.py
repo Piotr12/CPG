@@ -6,7 +6,7 @@ import respx
 
 from cpg_mcp import __version__
 from cpg_mcp.catalogue import Catalogue
-from cpg_mcp.client import ACCESS_HINT, STALE_HINT, ApiError, CpgClient, build_path, encode_query
+from cpg_mcp.client import ACCESS_HINT, RETRY_DELAY_SECONDS, STALE_HINT, ApiError, CpgClient, build_path, encode_query
 from cpg_mcp.config import Config
 from tests.conftest import TOKEN, ok, refused
 
@@ -43,7 +43,9 @@ def test_encodes_a_query_as_the_api_reads_it() -> None:
 async def test_reads_with_the_bearer_and_no_write_headers(api: respx.MockRouter, catalogue: Catalogue, config: Config) -> None:
     route = api.get("/api/tenants/test/materials").respond(json=ok({"items": [], "page": 1}))
 
-    result = await CpgClient(config).call(catalogue.operation("materials.list"), {"tenant": "test"}, {"q": "steel", "page": 1})
+    result = await CpgClient(config, retry_delay=0).call(
+        catalogue.operation("materials.list"), {"tenant": "test"}, {"q": "steel", "page": 1}
+    )
 
     assert result.data == {"items": [], "page": 1}
     assert result.replayed is False
@@ -59,7 +61,7 @@ async def test_sends_a_fresh_key_and_the_cached_generation_on_tenant_writes(
     api: respx.MockRouter, catalogue: Catalogue, config: Config
 ) -> None:
     route = api.post("/api/tenants/test/materials").respond(json=ok(CREATED))
-    client = CpgClient(config)
+    client = CpgClient(config, retry_delay=0)
     operation = catalogue.operation("materials.create")
 
     await client.call(operation, {"tenant": "test"}, body={"type": "raw", "description": "Steel", "baseUnit": "kg"})
@@ -76,7 +78,7 @@ async def test_sends_a_fresh_key_and_the_cached_generation_on_tenant_writes(
 async def test_sends_no_generation_on_a_global_write(api: respx.MockRouter, catalogue: Catalogue, config: Config) -> None:
     route = api.patch("/api/tenants/prod").respond(json=ok({"code": "prod", "readOnly": True}))
 
-    await CpgClient(config).call(catalogue.operation("tenants.set-read-only"), {"tenant": "prod"}, body={"readOnly": True})
+    await CpgClient(config, retry_delay=0).call(catalogue.operation("tenants.set-read-only"), {"tenant": "prod"}, body={"readOnly": True})
 
     assert "dataset-generation" not in route.calls.last.request.headers
     assert "idempotency-key" in route.calls.last.request.headers
@@ -89,7 +91,7 @@ async def test_retries_a_dropped_write_once_with_the_same_key_and_reports_the_re
         side_effect=[httpx.ConnectError("reset"), httpx.Response(200, json=ok({"id": "00000003"}), headers={"Idempotent-Replayed": "true"})]
     )
 
-    result = await CpgClient(config).call(catalogue.operation("mrp.runs.create"), {"tenant": "test"}, body={})
+    result = await CpgClient(config, retry_delay=0).call(catalogue.operation("mrp.runs.create"), {"tenant": "test"}, body={})
 
     assert result.replayed is True
     assert result.data == {"id": "00000003"}
@@ -102,7 +104,7 @@ async def test_retries_a_dropped_write_once_with_the_same_key_and_reports_the_re
 async def test_retries_a_proxy_error_once(api: respx.MockRouter, catalogue: Catalogue, config: Config, status: int) -> None:
     route = api.get("/api/tenants").mock(side_effect=[httpx.Response(status), httpx.Response(200, json=ok([]))])
 
-    assert (await CpgClient(config).call(catalogue.operation("tenants.list"))).data == []
+    assert (await CpgClient(config, retry_delay=0).call(catalogue.operation("tenants.list"))).data == []
     assert route.call_count == 2
 
 
@@ -110,7 +112,7 @@ async def test_never_retries_a_500_which_may_have_partly_run(api: respx.MockRout
     route = api.post("/api/tenants/test/mrp/runs").respond(500, json=refused("INTERNAL_ERROR", "Something went wrong."))
 
     with pytest.raises(ApiError) as raised:
-        await CpgClient(config).call(catalogue.operation("mrp.runs.create"), {"tenant": "test"}, body={})
+        await CpgClient(config, retry_delay=0).call(catalogue.operation("mrp.runs.create"), {"tenant": "test"}, body={})
 
     assert route.call_count == 1
     assert raised.value.as_json() == {"status": 500, "code": "INTERNAL_ERROR", "message": "Something went wrong."}
@@ -120,7 +122,7 @@ async def test_answers_the_second_proxy_error_as_it_is(api: respx.MockRouter, ca
     api.get("/api/tenants").respond(503, text="Service Unavailable")
 
     with pytest.raises(ApiError) as raised:
-        await CpgClient(config).call(catalogue.operation("tenants.list"))
+        await CpgClient(config, retry_delay=0).call(catalogue.operation("tenants.list"))
 
     assert (raised.value.status, raised.value.code) == (503, "UNEXPECTED_RESPONSE")
 
@@ -129,7 +131,7 @@ async def test_names_the_key_when_a_write_fails_twice(api: respx.MockRouter, cat
     route = api.post("/api/tenants/test/mrp/runs").mock(side_effect=httpx.ReadTimeout("slow"))
 
     with pytest.raises(ApiError) as raised:
-        await CpgClient(config).call(catalogue.operation("mrp.runs.create"), {"tenant": "test"}, body={})
+        await CpgClient(config, retry_delay=0).call(catalogue.operation("mrp.runs.create"), {"tenant": "test"}, body={})
 
     error = raised.value.as_json()
     assert error["code"] == "CONNECTION_FAILED"
@@ -141,7 +143,7 @@ async def test_says_a_read_could_not_reach_cpg(api: respx.MockRouter, catalogue:
     api.get("/api/me").mock(side_effect=httpx.ConnectError("refused"))
 
     with pytest.raises(ApiError) as raised:
-        await CpgClient(config).call(catalogue.operation("me.get"))
+        await CpgClient(config, retry_delay=0).call(catalogue.operation("me.get"))
 
     assert raised.value.code == "CONNECTION_FAILED"
     assert raised.value.message.startswith("The request could not reach CPG, twice.")
@@ -153,7 +155,7 @@ async def test_passes_a_refusal_through_with_its_fields_and_params(api: respx.Mo
     api.post("/api/tenants/prod/stock/corrections").respond(409, json=body)
 
     with pytest.raises(ApiError) as raised:
-        await CpgClient(config).call(catalogue.operation("stock.correct"), {"tenant": "prod"}, body={})
+        await CpgClient(config, retry_delay=0).call(catalogue.operation("stock.correct"), {"tenant": "prod"}, body={})
 
     assert raised.value.as_json() == {
         "status": 409,
@@ -169,7 +171,7 @@ async def test_tells_the_human_to_replace_a_revoked_token(api: respx.MockRouter,
     api.get("/api/me").respond(401, json=refused("UNAUTHORIZED", "Invalid or revoked token."))
 
     with pytest.raises(ApiError) as raised:
-        await CpgClient(config).call(catalogue.operation("me.get"))
+        await CpgClient(config, retry_delay=0).call(catalogue.operation("me.get"))
 
     assert raised.value.message == f"Invalid or revoked token. {ACCESS_HINT}"
     assert TOKEN not in raised.value.message
@@ -179,7 +181,7 @@ async def test_maps_an_error_without_details(api: respx.MockRouter, catalogue: C
     api.get("/api/me").respond(400, json={"ok": False})
 
     with pytest.raises(ApiError) as raised:
-        await CpgClient(config).call(catalogue.operation("me.get"))
+        await CpgClient(config, retry_delay=0).call(catalogue.operation("me.get"))
 
     assert raised.value.as_json() == {"status": 400, "code": "UNKNOWN", "message": ""}
 
@@ -188,24 +190,78 @@ async def test_refuses_an_answer_that_is_not_the_envelope(api: respx.MockRouter,
     api.get("/api/me").respond(200, json=[1, 2])
 
     with pytest.raises(ApiError) as raised:
-        await CpgClient(config).call(catalogue.operation("me.get"))
+        await CpgClient(config, retry_delay=0).call(catalogue.operation("me.get"))
 
     assert raised.value.code == "UNEXPECTED_RESPONSE"
 
 
-async def test_refreshes_a_stale_generation_and_says_test_was_reset_without_retrying(
+async def test_forgets_a_stale_generation_and_says_test_was_reset_without_retrying(
     api: respx.MockRouter, catalogue: Catalogue, config: Config
 ) -> None:
-    write = api.post("/api/tenants/test/mrp/runs").respond(409, json=refused("GENERATION_STALE", "The Test tenant was reset."))
-    client = CpgClient(config)
+    api.routes[0].mock(
+        side_effect=[httpx.Response(200, json=ok({"code": "test", "generation": generation})) for generation in (7, 8)],
+    )
+    write = api.post("/api/tenants/test/mrp/runs").mock(
+        side_effect=[httpx.Response(409, json=refused("GENERATION_STALE", "The Test tenant was reset.")), httpx.Response(200, json=ok({}))]
+    )
+    client = CpgClient(config, retry_delay=0)
 
     with pytest.raises(ApiError) as raised:
         await client.call(catalogue.operation("mrp.runs.create"), {"tenant": "test"}, body={})
 
     assert write.call_count == 1
     assert raised.value.message == f"The Test tenant was reset. {STALE_HINT}"
-    assert api.routes[0].call_count == 2  # read before the write, refreshed after it
-    assert await client.generation("test") == 7
+    await client.call(catalogue.operation("mrp.runs.create"), {"tenant": "test"}, body={})
+    assert [call.request.headers["dataset-generation"] for call in write.calls] == ["7", "8"]
+
+
+@pytest.mark.parametrize("status", [400, 409, 429])
+async def test_never_retries_a_refusal(api: respx.MockRouter, catalogue: Catalogue, config: Config, status: int) -> None:
+    route = api.post("/api/tenants/test/mrp/runs").respond(status, json=refused("REFUSED"))
+
+    with pytest.raises(ApiError):
+        await CpgClient(config, retry_delay=0).call(catalogue.operation("mrp.runs.create"), {"tenant": "test"}, body={})
+
+    assert route.call_count == 1
+
+
+async def test_retries_a_write_after_a_proxy_error_with_the_same_key(api: respx.MockRouter, catalogue: Catalogue, config: Config) -> None:
+    route = api.post("/api/tenants/test/mrp/runs").mock(side_effect=[httpx.Response(502), httpx.Response(200, json=ok({"id": "00000004"}))])
+
+    result = await CpgClient(config, retry_delay=0).call(catalogue.operation("mrp.runs.create"), {"tenant": "test"}, body={})
+
+    assert result.data == {"id": "00000004"}
+    assert len({call.request.headers["idempotency-key"] for call in route.calls}) == 1
+    assert route.call_count == 2
+
+
+async def test_warns_a_write_may_have_landed_after_two_proxy_errors(api: respx.MockRouter, catalogue: Catalogue, config: Config) -> None:
+    route = api.post("/api/tenants/test/mrp/runs").respond(504, text="Gateway Timeout")
+
+    with pytest.raises(ApiError) as raised:
+        await CpgClient(config, retry_delay=0).call(catalogue.operation("mrp.runs.create"), {"tenant": "test"}, body={})
+
+    error = raised.value.as_json()
+    assert (error["status"], error["code"]) == (504, "CONNECTION_FAILED")
+    assert "got HTTP 504 from the proxy, twice, so it may or may not have been applied" in error["message"]
+    assert error["idempotencyKey"] == route.calls.last.request.headers["idempotency-key"]
+
+
+async def test_pauses_before_its_one_retry(
+    api: respx.MockRouter, catalogue: Catalogue, config: Config, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pauses: list[float] = []
+
+    async def pause(seconds: float) -> None:
+        pauses.append(seconds)
+
+    monkeypatch.setattr("cpg_mcp.client.anyio.sleep", pause)
+    api.get("/api/tenants").mock(side_effect=[httpx.Response(503), httpx.Response(200, json=ok([]))])
+
+    await CpgClient(config).call(catalogue.operation("tenants.list"))
+
+    assert pauses == [RETRY_DELAY_SECONDS]
+    assert RETRY_DELAY_SECONDS == 1.0
 
 
 async def test_closes_its_http_client(config: Config) -> None:

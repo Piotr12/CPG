@@ -150,12 +150,16 @@ class ActionTool(Tool):
             properties["tenant"] = tenant_property(ctx.config)
         lines: list[str] = []
         for key, action in allowed.items():
-            branch, required = self._branch(ctx, action)
+            branch, required, note = self._branch(ctx, action)
             for prop, schema in branch.items():
                 _merge(properties, prop, schema)
-            choice = " ".join(f"{name}={value}" for name, value in zip(self.discriminators, key, strict=True))
-            needs = f" Requires: {', '.join(required)}." if required else ""
-            lines.append(f"- {choice + ': ' if choice else ''}{ctx.catalogue.operation(action.operation).summary}{needs}")
+            optional = [name for name in branch if name not in required]
+            parts = [ctx.catalogue.operation(action.operation).summary]
+            parts += [f"Requires: {', '.join(required)}."] if required else []
+            parts += [f"Optional: {', '.join(optional)}."] if optional else []
+            parts += [note] if note else []
+            choice = self._choice(key)
+            lines.append(f"- {choice + ': ' if choice else ''}{' '.join(parts)}")
         properties.update(self.extra_properties)
         is_write = any(operation.write is not None for operation in operations)
         description = "\n".join([self.description, *lines])
@@ -167,8 +171,18 @@ class ActionTool(Tool):
         annotations = types.ToolAnnotations(read_only_hint=not is_write)
         return types.Tool(name=self.name, description=description, input_schema=schema, annotations=annotations)
 
-    def _branch(self, ctx: ToolContext, action: Action) -> tuple[dict[str, Any], list[str]]:
-        """An action's own fields and the ones it requires, path parameters first."""
+    def _choice(self, key: tuple[str, ...]) -> str:
+        return " ".join(f"{name}={value}" for name, value in zip(self.discriminators, key, strict=True))
+
+    def _accepted(self, operation: Operation, action: Action) -> set[str]:
+        """The body or query fields the operation takes from the tool's other arguments."""
+        if operation.write is None and self.query_arg:
+            return set()
+        fields = _object_schema(operation.body if operation.write else operation.query).get("properties", {})
+        return {name for name in fields if name != action.file_field}
+
+    def _branch(self, ctx: ToolContext, action: Action) -> tuple[dict[str, Any], list[str], str | None]:
+        """An action's own fields, the ones it requires (path parameters first), and its body's note on refused fields."""
         operation = ctx.catalogue.operation(action.operation)
         properties: dict[str, Any] = {}
         required: list[str] = []
@@ -189,14 +203,18 @@ class ActionTool(Tool):
         if action.file_field:
             properties["file_path"] = FILE_PATH_PROPERTY
             required.append("file_path")
-        return properties, required
+        note = body.get("description")
+        return properties, required, note if isinstance(note, str) else None
+
+    def choose_key(self, args: Mapping[str, Any]) -> tuple[str, ...]:
+        return tuple(str(args.get(name, "")) for name in self.discriminators)
 
     def choose(self, args: Mapping[str, Any], ctx: ToolContext) -> Action:
-        key = tuple(str(args.get(name, "")) for name in self.discriminators)
+        key = self.choose_key(args)
         allowed = self._allowed(ctx)
         if key in allowed:
             return allowed[key]
-        choices = ", ".join(" ".join(f"{n}={v}" for n, v in zip(self.discriminators, k, strict=True)) for k in allowed)
+        choices = ", ".join(self._choice(k) for k in allowed)
         fields = {name: [f"Choose one of: {choices}."] for name in self.discriminators}
         raise ApiError(None, "VALIDATION_FAILED", f"No such choice for {self.name}.", field_errors=fields)
 
@@ -213,13 +231,26 @@ class ActionTool(Tool):
             "file_path",
             *(action.arg_of(param) for param in operation.path_params),
             *action.variants,
+            *([self.query_arg] if self.query_arg else []),
         }
         rest = {name: value for name, value in args.items() if name not in consumed}
+        # A field another action takes (the union offers it) would be dropped by a lenient server schema, so refuse it.
+        accepted = self._accepted(operation, action)
+        stray = sorted(name for name in rest if name not in accepted)
+        if stray:
+            choice = self._choice(self.choose_key(args)) or self.name
+            fields = {name: [f"Not accepted by {choice}."] for name in stray}
+            raise ApiError(None, "VALIDATION_FAILED", f"{', '.join(stray)} isn't taken by {choice}; nothing was sent.", field_errors=fields)
         if action.file_field:
             rest[action.file_field] = _encoded_file(args.get("file_path"))
         if operation.write is None:
-            query = dict(args.get(self.query_arg) or {}) if self.query_arg else rest
-            return payload(await execute(ctx, operation_id, path, query=query))
+            query = (args.get(self.query_arg) or {}) if self.query_arg else rest
+            if not isinstance(query, Mapping):
+                field = str(self.query_arg)
+                raise ApiError(
+                    None, "VALIDATION_FAILED", f"{field} must be an object.", field_errors={field: [f"{field} must be an object."]}
+                )
+            return payload(await execute(ctx, operation_id, path, query=dict(query)))
         body = rest if operation.body is not None else None
         try:
             return payload(await execute(ctx, operation_id, path, body=body))
@@ -244,10 +275,15 @@ def _merge(properties: dict[str, Any], name: str, schema: Any) -> None:
         properties[name] = schema
         return
     current = properties[name]
-    variants = current["anyOf"] if set(current) == {"anyOf"} else [current]
+    variants = current["anyOf"] if "anyOf" in current and set(current) <= {"anyOf", "type"} else [current]
     if schema not in variants:
         variants = [*variants, schema]
-    properties[name] = {"anyOf": variants}
+    merged: dict[str, Any] = {"anyOf": variants}
+    # Some clients rewrite a schema and guess a missing type; give them the one every variant shares.
+    kind = variants[0].get("type")
+    if kind is not None and all(variant.get("type") == kind for variant in variants):
+        merged["type"] = kind
+    properties[name] = merged
 
 
 def _encoded_file(file_path: Any) -> str:

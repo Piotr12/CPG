@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import quote
 
+import anyio
 import httpx
 
 from cpg_mcp import __version__
@@ -22,6 +23,8 @@ WRITE_TIMEOUT_SECONDS = 120.0
 # What kamal-proxy answers while the app restarts or a request queues too long (A4). A 500 may have partly run.
 RETRYABLE_STATUSES = frozenset({502, 503, 504})
 REPLAYED_HEADER = "Idempotent-Replayed"
+# A pause before the one retry: an immediate one during a deploy's restart usually meets the same 502.
+RETRY_DELAY_SECONDS = 1.0
 STALE_GENERATION_CODES = frozenset({"GENERATION_STALE", "GENERATION_REQUIRED"})
 
 ACCESS_HINT = (
@@ -81,9 +84,10 @@ def encode_query(query: Mapping[str, Any] | None) -> list[tuple[str, str]]:
 
 
 class CpgClient:
-    def __init__(self, config: Config, http: httpx.AsyncClient | None = None) -> None:
+    def __init__(self, config: Config, http: httpx.AsyncClient | None = None, *, retry_delay: float = RETRY_DELAY_SECONDS) -> None:
         self._config = config
         self._http = http or httpx.AsyncClient()
+        self._retry_delay = retry_delay
         self._generations: dict[str, int] = {}
 
     async def aclose(self) -> None:
@@ -113,13 +117,14 @@ class CpgClient:
             return self._result(response)
         except ApiError as error:
             if error.code in STALE_GENERATION_CODES and tenant:
-                await self.generation(tenant, refresh=True)
                 error.message = f"{error.message} {STALE_HINT}"
+                # Forget it rather than re-read it here, so nothing can hide this error: the next write reads the new one.
+                self._generations.pop(tenant, None)
             raise
 
-    async def generation(self, tenant: str, *, refresh: bool = False) -> int:
+    async def generation(self, tenant: str) -> int:
         """The tenant's current dataset generation, read once and cached until a write finds it stale."""
-        if refresh or tenant not in self._generations:
+        if tenant not in self._generations:
             url = self._config.base_url + f"/api/tenants/{quote(tenant, safe='')}"
             headers = {"Authorization": f"Bearer {self._config.token}", "User-Agent": f"cpg-mcp/{__version__}"}
             response = await self._send("GET", url, headers, timeout=READ_TIMEOUT_SECONDS)
@@ -136,10 +141,15 @@ class CpgClient:
                 return response
         except httpx.TransportError:
             pass
+        await anyio.sleep(self._retry_delay)
         try:
-            return await self._http.request(method, url, headers=dict(headers), timeout=timeout, **kwargs)
+            response = await self._http.request(method, url, headers=dict(headers), timeout=timeout, **kwargs)
         except httpx.TransportError as error:
-            raise _transport_error(error, key) from None
+            kind = "timed out" if isinstance(error, httpx.TimeoutException) else "could not reach CPG"
+            raise _lost(kind, key) from None
+        if key is not None and response.status_code in RETRYABLE_STATUSES:
+            raise _lost(f"got HTTP {response.status_code} from the proxy", key, response.status_code)
+        return response
 
     def _result(self, response: httpx.Response) -> ApiResult:
         try:
@@ -161,12 +171,12 @@ class CpgClient:
         raise ApiError(response.status_code, str(error.get("code", "UNKNOWN")), message, error.get("fieldErrors"), error.get("params"))
 
 
-def _transport_error(error: httpx.TransportError, key: str | None) -> ApiError:
-    kind = "timed out" if isinstance(error, httpx.TimeoutException) else "could not reach CPG"
+def _lost(kind: str, key: str | None, status: int | None = None) -> ApiError:
+    """A request that failed twice; for a write, a warning that it may have landed, with the key it used."""
     if key is None:
-        return ApiError(None, "CONNECTION_FAILED", f"The request {kind}, twice. Check CPG_BASE_URL and the network.")
+        return ApiError(status, "CONNECTION_FAILED", f"The request {kind}, twice. Check CPG_BASE_URL and the network.")
     message = (
         f"The write {kind}, twice, so it may or may not have been applied. Read the record again before deciding to repeat it:"
         " a new call is a new write."
     )
-    return ApiError(None, "CONNECTION_FAILED", message, extra={"idempotencyKey": key})
+    return ApiError(status, "CONNECTION_FAILED", message, extra={"idempotencyKey": key})

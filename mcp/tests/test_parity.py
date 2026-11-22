@@ -53,10 +53,14 @@ def test_offers_each_role_the_tools_its_operations_allow(context: Context, catal
 
 def test_warns_on_every_write_tool_that_can_reach_prod(context: Context, catalogue: Catalogue) -> None:
     definitions = CpgServer(context(ADMIN)).definitions
-    writes = {tool.name for tool in all_tools() if any(catalogue.operation(op).write for op in tool.operation_ids())}
-    tenant_writes = [name for name in writes if "tenant" in definitions[name].input_schema.get("properties", {})]
+    # Chosen from the catalogue, not from the schema the code builds: a write whose operation takes a tenant.
+    tenant_writes = [
+        tool.name
+        for tool in all_tools()
+        if any(catalogue.operation(op).write and "tenant" in catalogue.operation(op).path_params for op in tool.operation_ids())
+    ]
 
-    assert len(tenant_writes) >= 25
+    assert len(tenant_writes) == 25
     assert [name for name in tenant_writes if PROD_WARNING not in (definitions[name].description or "")] == []
     assert PROD_WARNING not in (definitions["cpg_list"].description or "")
 

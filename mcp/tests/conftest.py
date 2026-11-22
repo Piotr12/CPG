@@ -49,6 +49,6 @@ def api() -> Iterator[respx.MockRouter]:
 @pytest.fixture
 def context(catalogue: Catalogue, config: Config) -> Callable[..., ToolContext]:
     def make(me: dict[str, Any] = ADMIN) -> ToolContext:
-        return ToolContext(client=CpgClient(config), catalogue=catalogue, config=config, me=me)
+        return ToolContext(client=CpgClient(config, retry_delay=0), catalogue=catalogue, config=config, me=me)
 
     return make

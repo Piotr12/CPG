@@ -1,8 +1,11 @@
 """The MCP server: the tools the caller's role may use, and CPG's help topics as resources."""
 
+import json
 import sys
+from collections.abc import Mapping
 from contextlib import AbstractAsyncContextManager
 from typing import Any, Protocol
+from urllib.parse import urlsplit, urlunsplit
 
 import httpx
 import mcp_types as types
@@ -10,11 +13,11 @@ from mcp.server.lowlevel import Server
 from mcp.server.stdio import stdio_server
 
 from cpg_mcp import __version__
-from cpg_mcp.catalogue import Catalogue, load_catalogue
+from cpg_mcp.catalogue import Catalogue, load_catalogue, validation_errors
 from cpg_mcp.client import ApiError, CpgClient
 from cpg_mcp.config import Config
 from cpg_mcp.tools import all_tools
-from cpg_mcp.tools.base import Tool, ToolContext, compact, execute
+from cpg_mcp.tools.base import LOCAL_VALIDATION_MESSAGE, Tool, ToolContext, compact, execute
 
 HELP_URI = "cpg://help/"
 INSTRUCTIONS = (
@@ -33,6 +36,26 @@ class Streams(Protocol):
 
 def tool_result(data: Any, *, is_error: bool = False) -> types.CallToolResult:
     return types.CallToolResult(content=[types.TextContent(type="text", text=compact(data))], is_error=is_error)
+
+
+def decoded_arguments(schema: Mapping[str, Any], arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """The arguments, with an object or array a client sent as a JSON string decoded (some clients stringify them)."""
+    properties = schema.get("properties", {})
+    decoded = dict(arguments)
+    for name, value in arguments.items():
+        expected = properties.get(name, {}).get("type")
+        if isinstance(value, str) and expected in ("object", "array"):
+            try:
+                decoded[name] = json.loads(value)
+            except ValueError:
+                continue
+    return decoded
+
+
+def without_credentials(url: str) -> str:
+    """A URL fit to print: any user name or password in it removed."""
+    parts = urlsplit(url)
+    return urlunsplit(parts._replace(netloc=parts.hostname + (f":{parts.port}" if parts.port else ""))) if parts.hostname else url
 
 
 class CpgServer:
@@ -65,8 +88,13 @@ class CpgServer:
         tool = self.tools.get(params.name)
         if tool is None:
             return tool_result({"code": "UNKNOWN_TOOL", "message": f"There is no tool {params.name} for this account."}, is_error=True)
+        schema = self.definitions[params.name].input_schema
+        args = decoded_arguments(schema, params.arguments or {})
+        errors = validation_errors(schema, args)
+        if errors:
+            return tool_result({"code": "VALIDATION_FAILED", "message": LOCAL_VALIDATION_MESSAGE, "fieldErrors": errors}, is_error=True)
         try:
-            return tool_result(await tool.run(dict(params.arguments or {}), self.ctx))
+            return tool_result(await tool.run(args, self.ctx))
         except ApiError as error:
             return tool_result(error.as_json(), is_error=True)
         except Exception as error:
@@ -99,7 +127,9 @@ async def start(config: Config, http: httpx.AsyncClient | None = None, catalogue
         ctx.me = (await execute(ctx, "me.get", {})).data
     except ApiError as error:
         await ctx.client.aclose()
-        raise StartupError(f"cpg-mcp can't start: {error.message} ({error.code}, CPG_BASE_URL={config.base_url}).") from None
+        raise StartupError(
+            f"cpg-mcp can't start: {error.message} ({error.code}, CPG_BASE_URL={without_credentials(config.base_url)})."
+        ) from None
     return ctx
 
 

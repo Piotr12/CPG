@@ -120,6 +120,35 @@ def test_offers_a_tool_without_discriminators_as_its_operation(context: Context)
     assert "- Accepts one proposal" in (definition.description or "")
 
 
+def test_gives_a_field_two_actions_type_alike_their_shared_type() -> None:
+    properties: dict[str, Any] = {}
+    _merge(properties, "lines", {"type": "array", "maxItems": 2})
+    _merge(properties, "lines", {"type": "array", "maxItems": 3})
+    _merge(properties, "lines", {"type": "array", "maxItems": 4})
+
+    assert properties["lines"] == {"type": "array", "anyOf": [{"type": "array", "maxItems": n} for n in (2, 3, 4)]}
+
+
+def test_lists_each_actions_optional_fields_and_what_it_never_takes(context: Context) -> None:
+    definition = action_tool("cpg_save_purchase_requisition").definition(context())
+    assert definition is not None
+    update = next(line for line in (definition.description or "").splitlines() if line.startswith("- action=update"))
+
+    assert "Requires: id, version, requiredDate." in update
+    assert "Never send: material, location, quantity, unit." in update
+    create = next(line for line in (definition.description or "").splitlines() if line.startswith("- action=create"))
+    assert "Optional:" not in create or "Never send" not in create
+
+
+def test_names_a_lists_optional_query(context: Context) -> None:
+    definition = action_tool("cpg_list").definition(context())
+    assert definition is not None
+
+    assert "- entity=materials: Lists the tenant's materials, narrowed by q and sorted by sort/dir. Optional: query." in (
+        definition.description or ""
+    )
+
+
 # Running a tool
 
 
@@ -387,3 +416,41 @@ async def test_preferences_read_without_arguments_and_change_only_what_is_sent(a
     definition = preferences.definition(context())
     assert definition is not None
     assert set(definition.input_schema["properties"]) == {"locale", "theme"}
+
+
+@pytest.mark.parametrize(
+    ("tool_name", "args", "stray"),
+    [
+        ("cpg_save_material", {"action": "create", "type": "raw", "description": "Tin", "baseUnit": "kg", "active": False}, "active"),
+        ("cpg_list", {"entity": "materials", "q": "steel"}, "q"),
+        ("cpg_get", {"entity": "materials", "id": "00000001", "revision": "2"}, "revision"),
+        ("cpg_revoke_token", {"id": "t9", "reason": "old"}, "reason"),
+        ("cpg_mrp_accept_proposal", {"run": "00000001", "proposal": "p", "note": "x"}, "note"),
+    ],
+)
+async def test_refuses_a_field_the_chosen_action_would_drop(
+    api: respx.MockRouter, context: Context, tool_name: str, args: dict[str, Any], stray: str
+) -> None:
+    with pytest.raises(ApiError) as raised:
+        await action_tool(tool_name).run(args, context())
+
+    assert raised.value.code == "VALIDATION_FAILED"
+    assert raised.value.field_errors is not None
+    assert list(raised.value.field_errors) == [stray]
+    assert raised.value.field_errors[stray][0].startswith("Not accepted by ")
+    assert not api.calls
+
+
+async def test_names_the_tool_when_it_has_no_discriminator(api: respx.MockRouter, context: Context) -> None:
+    with pytest.raises(ApiError) as raised:
+        await action_tool("cpg_revoke_token").run({"id": "t9", "reason": "old"}, context())
+
+    assert raised.value.field_errors == {"reason": ["Not accepted by cpg_revoke_token."]}
+
+
+async def test_refuses_a_query_that_is_not_an_object(api: respx.MockRouter, context: Context) -> None:
+    with pytest.raises(ApiError) as raised:
+        await action_tool("cpg_list").run({"entity": "materials", "query": "q=steel"}, context())
+
+    assert raised.value.field_errors == {"query": ["query must be an object."]}
+    assert not api.calls
