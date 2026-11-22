@@ -22,6 +22,20 @@ export function shortageText(shortage: MrpShortageView, unit: string, locale: Lo
 }
 
 /**
+ * A plan's short requirements grouped by their day, in one pass, each day's entries kept in the order given (#391): the
+ * Day view looks each of its 90 days up here instead of scanning the whole list once per day.
+ */
+export function shortagesByDate(shortages: readonly MrpShortageView[]): ReadonlyMap<string, readonly MrpShortageView[]> {
+  const days = new Map<string, MrpShortageView[]>();
+  for (const shortage of shortages) {
+    const day = days.get(shortage.date);
+    if (day) day.push(shortage);
+    else days.set(shortage.date, [shortage]);
+  }
+  return days;
+}
+
+/**
  * A day's short requirements (#380, spec Q5): an ordered list in the order MRP serves them, one line each, as text, so
  * no colour carries the meaning. Nothing on a day with none.
  */

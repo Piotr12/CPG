@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { MrpShortageView } from "@cpg/core";
 import { en } from "../../i18n/messages/en";
 import { pl } from "../../i18n/messages/pl";
-import { MrpShortages, shortageText } from "./mrp-shortages";
+import { MrpShortages, shortagesByDate, shortageText } from "./mrp-shortages";
 
 const MONDAY = "2026-10-05";
 const entry = (fields: Partial<MrpShortageView>): MrpShortageView => ({
@@ -65,5 +65,27 @@ describe("MrpShortages (#380, spec Q5)", () => {
   it("renders nothing on a day with none", () => {
     const { container } = render(<MrpShortages shortages={[]} unit="kg" locale="en" labels={en.mrp.report.shortages} />);
     expect(container.innerHTML).toBe("");
+  });
+});
+
+describe("shortagesByDate (#391)", () => {
+  it("groups a plan's entries by their day in one pass, each day keeping its entries in the order given", () => {
+    const tuesday = "2026-10-06";
+    const first = entry({ kind: "forecast" });
+    const second = entry({ kind: "transfer", date: tuesday, document: "00000002" });
+    const third = entry({ kind: "safety-target" });
+    const fourth = entry({ kind: "component", date: tuesday, document: "00000004" });
+    const fifth = entry({ kind: "customer-order", document: "00000012", position: 0 });
+
+    const days = shortagesByDate([first, second, third, fourth, fifth]);
+
+    expect([...days.keys()]).toEqual([MONDAY, tuesday]);
+    expect(days.get(MONDAY)).toEqual([first, third, fifth]);
+    expect(days.get(tuesday)).toEqual([second, fourth]);
+    expect(days.get("2026-10-07")).toBeUndefined();
+  });
+
+  it("has no days for a plan with no shortages", () => {
+    expect(shortagesByDate([]).size).toBe(0);
   });
 });
