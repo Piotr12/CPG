@@ -2227,6 +2227,7 @@ export const en = {
             label: "Unit not convertible",
             text: "A stored {record} of this material can't be read, so MRP proposes no supply for it.",
             document: "A stored {record} of this material, {document}, can't be read, so MRP proposes no supply for it.",
+            orderLine: "A stored customer order line of this material, customer order {order}, line {line}, can't be read, so MRP proposes no supply for it.",
             plain: "A stored quantity, unit factor or date of this material can't be read, so MRP proposes no supply for it.",
             records: {
               "stock-balance": "stock balance", "customer-order-line": "customer order line", forecast: "forecast", "safety-stock-target": "safety stock target",
