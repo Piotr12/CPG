@@ -17,15 +17,21 @@
 - Added the sentence to AGENTS.md's Deployment bullet, and the same sentence to the copy of that bullet in `.ai/docs/engineering-standards.md` §4, so the two docs stay in step.
 - The PR says `Refs #371`, not a closing keyword: criterion (1) stays open until the owner creates the ruleset. The PR should merge only after the ruleset exists, otherwise the new sentence describes a protection that isn't there yet.
 
+- 07:51 PR #394's `unit-timing` failed: `mrp-run-timing.test.ts`, ten times, worst case for proposals, longest event-loop stall 1645 ms against a 1500 ms budget. The PR changes only docs, and `main`'s last four green runs measured 892–1207 ms for the same case, so this was runner noise. Re-ran the failed job, and it passed.
+- 08:01 `unit-coverage` then failed by merging attempt 1's failing timing result. The run held two `unit-blob-timing` artifacts and `download-artifact` picked the stale one. Deleted the stale artifact (14745726155) and re-ran `unit-coverage`. Recorded as a lesson.
+
 ## Changes
 
 - `AGENTS.md`: Deployment bullet.
 - `.ai/docs/engineering-standards.md`: §4, the bullet that repeats the Deployment rule.
+- `.ai/lessons.md`: a re-run unit shard leaves `unit-coverage` red until the stale blob artifact is deleted.
 
 ## Verification
 
-- See the PR's summary comment and CI run. Docs-only change: no code, coverage or build surface changed.
+- `npx vitest run tests/ai-filenames.test.ts`: 4 passed. `npm run lint`: clean. Docs only, so coverage, build and integration ran in CI.
+- PR #394 CI run 44999593457, attempt 3: every check passed (lint, typecheck, unit-tests 1–2, unit-timing, unit-coverage, build, integration-tests 1–4).
 
 ## Follow-ups
 
 - Owner: create the ruleset and decide how `spec-copies.yml` works once `main` refuses direct pushes.
+- `ci.yml`'s `unit-coverage` could download only the latest attempt's blobs, so re-running a shard is enough. Separately, the ten-times worst-case stall (892–1645 ms against 1500) is close enough to its budget to flake.
