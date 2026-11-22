@@ -4,7 +4,7 @@
 **Agent:** Claude Code (Opus 5.5), autonomous, `om-auto-fix-issue 393` → feature route → `om-auto-implement-spec` → `om-auto-create-pr`
 **Source doc:** `.ai/specs/2026-11-22--0818UTC-local-mcp-server.md`
 **Issue:** #393 (Refs: this PR is Phase 1 only; the Python server ships on a later PR)
-**Status:** in progress
+**Status:** complete
 
 ## Goal
 
@@ -48,11 +48,21 @@ Ship the spec's Phase 1 on its own PR, as the spec's Implementation Plan says: `
 
 ## Progress
 
+PR: #402
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: app side
 
-- [ ] 1.1 GET /api/me and its BACKWARD_COMPATIBILITY entry
-- [ ] 1.2 toToolJsonSchema and the operation registry
-- [ ] 1.3 Route and registry parity test
-- [ ] 1.4 Catalogue builder, script, committed catalogue and drift test
+- [x] 1.1 GET /api/me and its BACKWARD_COMPATIBILITY entry — 0b52c786
+- [x] 1.2 toToolJsonSchema and the operation registry — 18d4852a
+- [x] 1.3 Route and registry parity test — f76e8644
+- [x] 1.4 Catalogue builder, script, committed catalogue and drift test — d5c925ce, 2e2caa54
+
+## Verification
+
+- `npm run lint`, `npm run typecheck`: exit 0.
+- `npm run test:coverage`: 687 files, 5,749 tests passed, 100% statements, branches, functions and lines.
+- `npm run build`: exit 0 on the second run. The first stopped on Next.js's `SecurityFatalError` notice (moderate advisories GHSA-mfr8-8qww-v76h and GHSA-vc7v-qv4w-wrv8 on `next` 16.0.0–16.4.4, already on `main`). Not upgraded here: it is out of this PR's scope and left for the owner.
+- `tests/integration/api-tokens.test.ts`: 9/9 against a local standalone build (no Docker on this machine), including the new `/api/me` test.
+- The parity test was checked by mutation: a dropped entry, a wrong role, a wrong body schema and a missing body schema each failed their own check.
