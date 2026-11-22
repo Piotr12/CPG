@@ -26,7 +26,7 @@ A local stdio MCP server, `mcp/` (`cpg-mcp`), that gives an agent CPG's whole AP
 
 - **One call path.** Every tool maps its arguments to one catalogue operation plus path parameters, query and body. The client validates the query and body against that operation's JSON Schema, then sends the request. A tool's input schema guides the model; the operation schema is what's checked locally, and the server stays the authority.
 - **Patterns.** `jsonschema` validates `pattern` with the `regex` package, so the catalogue's `\p{L}`/`\p{N}` work (Phase 1 decision).
-- **Save tools (A9).** The input schema is `{"type": "object", "oneOf": [...]}` with one branch per allowed action, each branch carrying `action` as a `const`. A top-level `anyOf` with `null` (MRP bodies) is wrapped in an object.
+- **Save tools (A9), changed while building.** The Claude API refuses a top-level `oneOf`/`anyOf`/`allOf` in a tool's `input_schema`, so every tool's schema is one object. It holds the discriminators as enums and the union of the actions' fields; a field two actions shape differently becomes a property-level `anyOf`. Each action's required fields are in the description, and the chosen action's own operation schema is checked locally. A body that is a top-level `anyOf` with `null` (the MRP bodies) contributes its object branch.
 - **Roles.** The server lists a tool when the role may call at least one of its actions, and offers only those actions (enum values / `oneOf` branches).
 - **Retry (A4).** Reads and writes retry once on a connection error, a timeout or 502/503/504, and a write keeps its `Idempotency-Key`.
 - **Integration (Q8 B).** No CI stdio test. The `respx` tests and in-process MCP client tests cover the behaviour, and a manual run against a local server is recorded on the PR (step 15).
@@ -59,26 +59,36 @@ A local stdio MCP server, `mcp/` (`cpg-mcp`), that gives an agent CPG's whole AP
 - A second toolchain in CI: a red Python job blocks deploys (`deploy.yml` calls `ci.yml`).
 - `mcp` 2.3 is a recent major; its low-level `Server` takes `on_*` handler arguments. A prototype run is in-process with `mcp.client.Client(server)`.
 
+## Log
+
+- 09:05 UTC: plan, draft PR #403, stacked on #402.
+- A prototype confirmed `mcp` 2.3's API: `Server(on_list_tools=…, on_call_tool=…)`, and `mcp.client.Client(server)` in-process for tests.
+- Coverage: a `# pragma: no cover` slipped into the first draft of `client._send`. It was replaced by a straight-line two-attempt structure, since AGENTS.md forbids coverage exclusions.
+- `ruff` S105 flagged constants named `TOKEN_HINT`/`PASSWORD_NOTE` (false positives); they were renamed `ACCESS_HINT`/`CREDENTIAL_NOTE` rather than suppressed.
+- The manual run (step 4.4) needed a token. The integration helpers import Vitest, so `agent-browser` was driven directly to create one on `/admin/tokens`.
+
 ## Progress
+
+PR: #403
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 2: Python skeleton and reads
 
-- [ ] 2.1 Package, config and entry point
-- [ ] 2.2 HTTP client
-- [ ] 2.3 Catalogue loader and MCP server
-- [ ] 2.4 Context and read tools
-- [ ] 2.5 CI python job
+- [x] 2.1 Package, config and entry point — c9f77af9
+- [x] 2.2 HTTP client — 537096a1
+- [x] 2.3 Catalogue loader and MCP server — c34bb99f
+- [x] 2.4 Context and read tools — d0b59178
+- [x] 2.5 CI python job — 3f30d32b
 
 ### Phase 3: writes
 
-- [ ] 3.1 Planning tools and document saves
-- [ ] 3.2 Postings, lifecycle, reversals and token revoke
+- [x] 3.1 Planning tools and document saves — d0b59178
+- [x] 3.2 Postings, lifecycle, reversals and token revoke — d0b59178
 
 ### Phase 4: admin and parity
 
-- [ ] 4.1 Admin tools, imports and users
-- [ ] 4.2 Exclusions, parity and role tests
-- [ ] 4.3 README and BACKWARD_COMPATIBILITY §6
-- [ ] 4.4 Manual run against a local server
+- [x] 4.1 Admin tools, imports and users — d0b59178
+- [x] 4.2 Exclusions, parity and role tests — d01109fd
+- [x] 4.3 README and BACKWARD_COMPATIBILITY §6 — 9228506c, 58f785de
+- [x] 4.4 Manual run against a local server — recorded in the spec notes and on the PR
