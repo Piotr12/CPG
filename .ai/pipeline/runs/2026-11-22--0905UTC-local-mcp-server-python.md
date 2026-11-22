@@ -4,7 +4,7 @@
 **Agent:** Claude Code (Opus 5.5), autonomous, `om-auto-fix-issue 393` → feature route → `om-auto-implement-spec` → `om-auto-create-pr`
 **Source doc:** `.ai/specs/2026-11-22--0818UTC-local-mcp-server.md`
 **Issue:** #393 (this PR closes it). Stacked on #402 (Phase 1, the app side and `catalogue.json`).
-**Status:** in progress
+**Status:** complete
 
 ## Goal
 
@@ -111,3 +111,15 @@ PR: #403
 - [x] 4.2 Exclusions, parity and role tests — d01109fd
 - [x] 4.3 README and BACKWARD_COMPATIBILITY §6 — 9228506c, 58f785de
 - [x] 4.4 Manual run against a local server — recorded in the spec notes and on the PR
+
+## Verification
+
+- Python: `uv run pytest --cov=cpg_mcp --cov-branch --cov-fail-under=100`, 110 passed at 100%; `ruff check`, `ruff format --check` and `pyright` (0 errors) are clean; `pip-audit --skip-editable` finds no known vulnerabilities.
+- Node: `npm run lint`, `typecheck`, `test:coverage` (687 files, 100%) and `build` exit 0. The build needed one retry past Next.js's security notice.
+- CI on ed9e2a74: all 12 checks pass, the new `python` job and the four integration shards included.
+- Manual run over real stdio against a local standalone build: on the PR and in the spec's implementation notes.
+
+## Follow-ups
+
+- #398: the onboarding skill and MCP prompt, unblocked once #402 and this PR merge.
+- Next.js moderate advisories (GHSA-mfr8-8qww-v76h, GHSA-vc7v-qv4w-wrv8): already on `main`, left for the owner.
