@@ -3,7 +3,7 @@
 **Date:** 2026-11-22 07:41 UTC
 **Agent:** Claude Code / Opus 5.5 (`om-auto-fix-issue`, dispatched by cezar)
 **Spec:** none (bug #390)
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -27,8 +27,11 @@ The Invalid UoM Conversion text in the MRP Explanations named the first line of 
 - `npm run lint`, `npm run typecheck`: clean.
 - `npm run test:coverage`: 681 files, 5,716 passed (2 skipped); 100% statements, branches, functions and lines.
 - `npm run build`: the first run compiled and generated all 113 pages, then `next build` exited 1 with a `SecurityFatalError` upgrade nudge (an npm advisory against `next@16.4.2`, telling the agent to retry). The retry exited 0. The upgrade is out of scope here and was not run.
+- PR #395. An independent review (`om-auto-review-pr`) approves, posted as a comment because the account can't approve its own PR: no blockers, no majors. The BOM-line follow-up is filed as #396.
+- UI: the PR head's `next start` ran on a throwaway `DATA_DIR`, since Docker wasn't running. Test's order 00000090 had its first line corrupted, then Run MRP. The Explanations read "customer order 00000090, line 1" and "(zamówienie klienta 00000090, pozycja 1)", and the order's cancel dialog calls that line "Wiersz 1". Screenshots are on the PR, from the `qa-evidence` branch.
+- CI on d088b0fb ([run 44999940017](https://github.com/Piotr12/CPG/actions/runs/44999940017)): all 11 checks pass, among them lint, typecheck, build, unit-tests 1 and 2, unit-coverage, unit-timing and integration shards 1 to 4.
 - No integration test covers this text: it needs a row corrupted around the services (MRP-036 writes it with SQL), which the image-driven suite can't do. The unit test checks the screen's text in both languages.
 
 ## Follow-ups
 
-- BOM lines are stored from 0 too (`bom.service.ts`, `insertRevision`), so a BOM line's Invalid UoM Conversion document `BOM/revision/position` names its first line `/0`. Not in #390's scope.
+- BOM lines are stored from 0 too (`bom.service.ts`, `insertRevision`), so a BOM line's Invalid UoM Conversion document `BOM/revision/position` names its first line `/0`. Not in #390's scope. Filed as #396.
