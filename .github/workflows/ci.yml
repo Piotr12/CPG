@@ -131,6 +131,31 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+  # cpg-mcp, the local MCP server in mcp/ (spec 2026-11-22--0818UTC-local-mcp-server, Q8 B): lint, format, types,
+  # unit tests at 100% line and branch coverage, and a dependency audit, as the Node jobs do for the app. The
+  # install and the audit reach PyPI, so each has its own limit (tests/ci-workflow.test.ts).
+  python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: mcp
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: mcp/uv.lock
+      - run: uv sync --locked
+        timeout-minutes: 5
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pyright
+      - run: uv run pytest --cov=cpg_mcp --cov-branch --cov-fail-under=100
+      - run: uv run pip-audit --skip-editable
+        timeout-minutes: 5
+
   # Builds the production image, starts it with Testcontainers on an empty data directory and
   # drives it with agent-browser (tests/integration/).
   #
