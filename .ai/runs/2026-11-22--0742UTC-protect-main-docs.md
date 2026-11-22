@@ -3,7 +3,7 @@
 **Date:** 2026-11-22 07:42 UTC
 **Agent:** Claude Code / Claude Opus 5.5 (om-auto-fix-issue, dispatched by cezar)
 **Spec:** none (the issue's acceptance criteria are the scope)
-**Status:** partial (docs PR open; the ruleset is the owner's repository setting)
+**Status:** done (docs PR #394; the ruleset itself stays the owner's repository setting, as #371 says)
 
 ## Goal
 
@@ -20,11 +20,14 @@
 - 07:51 PR #394's `unit-timing` failed: `mrp-run-timing.test.ts`, ten times, worst case for proposals, longest event-loop stall 1645 ms against a 1500 ms budget. The PR changes only docs, and `main`'s last four green runs measured 892–1207 ms for the same case, so this was runner noise. Re-ran the failed job, and it passed.
 - 08:01 `unit-coverage` then failed by merging attempt 1's failing timing result. The run held two `unit-blob-timing` artifacts and `download-artifact` picked the stale one. Deleted the stale artifact (14745726155) and re-ran `unit-coverage`. Recorded as a lesson.
 
+- 08:45 The owner said to proceed without questions. Assumed: (1) the ruleset stays the owner's step, as #371 says, so this run doesn't create it; (2) `spec-copies.yml` stays unchanged and fails loudly on the rare race (option (a)). Updated the CI bullet in AGENTS.md and standards §4, and the stacked-spec-PR lesson, which said no follow-up PR is needed. Filed #399 (stale blob artifact) and #400 (stall bound flake).
+
 ## Changes
 
 - `AGENTS.md`: Deployment bullet.
 - `.ai/docs/engineering-standards.md`: §4, the bullet that repeats the Deployment rule.
-- `.ai/lessons.md`: a re-run unit shard leaves `unit-coverage` red until the stale blob artifact is deleted.
+- AGENTS.md CI bullet and standards §4: `spec-copies.yml`'s direct push is refused once `main` is protected, so a pull request deletes the copy.
+- `.ai/lessons.md`: the stacked-spec-PR lesson now says to open a pull request that deletes the copy; and a re-run unit shard leaves `unit-coverage` red until the stale blob artifact is deleted.
 
 ## Verification
 
@@ -34,4 +37,5 @@
 ## Follow-ups
 
 - Owner: create the ruleset and decide how `spec-copies.yml` works once `main` refuses direct pushes.
-- `ci.yml`'s `unit-coverage` could download only the latest attempt's blobs, so re-running a shard is enough. Separately, the ten-times worst-case stall (892–1645 ms against 1500) is close enough to its budget to flake.
+- #399: `unit-coverage` should merge only the latest attempt's blobs.
+- #400: the ten-times worst-case stall bound flakes (892–1645 ms against 1500).
