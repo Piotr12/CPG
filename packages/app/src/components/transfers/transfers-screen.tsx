@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Fragment, type ReactNode } from "react";
 import type { Locale, MaterialSummary, NamedRecordView, TransferView } from "@cpg/core";
 import type { TransferSort } from "@cpg/core/validators/transfers/transfer-list.schema";
 import { TRANSFER_PAGE_SIZE } from "@cpg/core/validators/transfers/transfer.schema";
@@ -8,6 +7,7 @@ import { PageHeader } from "@cpg/ui/backend/page-header";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { Highlight } from "@cpg/ui/backend/tables/highlight";
 import { transferStatusTone } from "../document-lifecycle/status-tone";
+import { fillNodes } from "../../i18n/fill-nodes";
 import type { Messages } from "../../i18n/messages/en";
 import { PageLinks } from "../layout/page-links";
 import { ListSearchBar, NoSearchResults } from "../lists/list-search-bar";
@@ -132,9 +132,4 @@ export function TransfersScreen({ tenant, transfers, page, total, list, material
       />
     </div>
   );
-}
-
-/** `template` with each `{name}` replaced by a node, so a filled label can hold marked text. */
-function fillNodes(template: string, values: Record<string, ReactNode>): ReactNode[] {
-  return template.split(/\{(\w+)\}/).map((part, index) => (index % 2 === 1 ? <Fragment key={index}>{values[part]}</Fragment> : part));
 }

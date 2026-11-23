@@ -4,7 +4,9 @@ import { connection } from "next/server";
 import { ArrowRight } from "lucide-react";
 import { LoadingMessage } from "@cpg/ui/backend/feedback/loading-message";
 import { Button } from "@cpg/ui/components/button";
+import { agentDownloads } from "../agent-downloads/downloads";
 import { currentUser, HOME_PATH, SIGN_IN_PATH } from "../auth/require-admin";
+import { DownloadButtons } from "../components/agent-downloads/download-buttons";
 import { MammothMark } from "../components/layout/mammoth-mark";
 import type { HelpTopicId } from "../help/topics";
 import { getMessages } from "../i18n/get-messages";
@@ -52,6 +54,17 @@ async function HomeContent() {
           </li>
         ))}
       </ol>
+
+      <section aria-labelledby="home-agents" data-home-agents className="flex flex-col items-start gap-3 border-t border-border pt-6">
+        <h2 id="home-agents" className="text-lg font-semibold">
+          {t.agents.heading}
+        </h2>
+        <p className="max-w-prose text-muted-foreground">{t.agents.text}</p>
+        <DownloadButtons mcpFileName={agentDownloads().mcp.fileName} labels={t.agents} />
+        <Link href="/agents" className="text-foreground underline underline-offset-4">
+          {t.agents.howTo}
+        </Link>
+      </section>
     </div>
   );
 }

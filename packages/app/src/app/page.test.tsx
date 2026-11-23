@@ -1,8 +1,11 @@
+import path from "node:path";
 import { render, screen, within } from "@testing-library/react";
 import type { ReactElement } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { LoadingMessage } from "@cpg/ui/backend/feedback/loading-message";
 import { resolveServerComponents } from "../../../../tests/setup/server-components";
+import { agentDownloads } from "../agent-downloads/downloads";
+import { fixturePackage } from "../agent-downloads/mcp-package-fixture";
 import { HELP_TOPIC_IDS } from "../help/topics";
 import { en } from "../i18n/messages/en";
 import { pl } from "../i18n/messages/pl";
@@ -12,6 +15,13 @@ const mocks = vi.hoisted(() => ({ connection: vi.fn(), getMessages: vi.fn(), cur
 vi.mock("next/server", () => ({ connection: mocks.connection }));
 vi.mock("../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
 vi.mock("../auth/require-admin", () => ({ currentUser: mocks.currentUser, HOME_PATH: "/admin", SIGN_IN_PATH: "/login" }));
+
+let archive: string;
+beforeAll(() => {
+  const root = fixturePackage();
+  vi.spyOn(process, "cwd").mockReturnValue(path.join(path.dirname(root), "packages", "app"));
+  archive = agentDownloads().mcp.fileName;
+});
 
 async function renderAs(locale: "en" | "pl", user: object | null = null) {
   mocks.currentUser.mockResolvedValue(user);
@@ -76,8 +86,22 @@ describe("HomePage", () => {
   it("links only to help topics that exist", async () => {
     await renderAs("en");
 
-    const ids = screen.getAllByRole("listitem").map((item) => item.querySelector("a")?.getAttribute("href")?.replace("/help#", ""));
+    const ids = within(screen.getByRole("list", { name: "What CPG covers" })).getAllByRole("listitem").map((item) => item.querySelector("a")?.getAttribute("href")?.replace("/help#", ""));
     expect(ids.every((id) => (HELP_TOPIC_IDS as readonly (string | undefined)[]).includes(id))).toBe(true);
+  });
+
+  it("offers both agent downloads below the flow, and links the install guide (#398)", async () => {
+    await renderAs("en");
+
+    const section = screen.getByRole("region", { name: "Use CPG from an AI agent" });
+    expect(screen.getByRole("list", { name: "What CPG covers" }).compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(section).getAllByRole("link").map((link) => [link.textContent, link.getAttribute("href")])).toEqual([
+      ["Download the MCP server", `/downloads/${archive}`],
+      ["Download the skill", "/downloads/cpg-onboarding-skill.zip"],
+      ["How to install", "/agents"],
+    ]);
+    expect(archive).toMatch(/^cpg-mcp-[0-9a-f]{12}\.zip$/);
+    expect(within(section).getByRole("heading", { level: 2 })).toBeTruthy();
   });
 
   it("leaves the footer to the layout", async () => {
@@ -92,6 +116,8 @@ describe("HomePage", () => {
     expect(screen.getByRole("link", { name: "Prognozy i zamówienia klientów" }).closest("[lang]")?.getAttribute("lang")).toBe("pl");
     expect(screen.getByRole("list", { name: "Co obejmuje CPG" })).toBeTruthy();
     expect(screen.getByText(pl.home.tagline)).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Korzystaj z CPG przez agenta AI" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Jak zainstalować" }).getAttribute("href")).toBe("/agents");
   });
 
   it("shows the language-neutral loading shell until the request-time content streams", () => {
