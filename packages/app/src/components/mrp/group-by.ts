@@ -5,9 +5,10 @@
 export function groupBy<T, K>(items: readonly T[], key: (item: T) => K): ReadonlyMap<K, readonly T[]> {
   const groups = new Map<K, T[]>();
   for (const item of items) {
-    const group = groups.get(key(item));
+    const value = key(item);
+    const group = groups.get(value);
     if (group) group.push(item);
-    else groups.set(key(item), [item]);
+    else groups.set(value, [item]);
   }
   return groups;
 }
