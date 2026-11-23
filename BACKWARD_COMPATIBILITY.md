@@ -473,6 +473,17 @@ Source: root `package.json` scripts, `.github/workflows/ci.yml`, `.github/workfl
 
 **Breaking:** renaming or removing `dev`, `build`, `start`, `lint`, `typecheck`, `test`, `test:coverage`, `test:integration`, `db:migrate` or `db:migration:create`. **Required path:** update every workflow, the config's `validation.commands`, `AGENTS.md` and `SDLC.md` in the same PR.
 
+### 6. MCP server
+
+Source: `mcp/` (`cpg-mcp`, spec `2026-11-22--0818UTC-local-mcp-server`, #393). Agents' configurations and the onboarding skill (#398) name its tools, so they are a contract.
+
+- **Tool names:** `cpg_whoami`, `cpg_help`, `cpg_preferences`, `cpg_list`, `cpg_get`, `cpg_report`, `cpg_audit`, `cpg_mrp_run`, `cpg_mrp_accept_proposal`, `cpg_save_customer_order`, `cpg_save_shipment`, `cpg_save_purchase_requisition`, `cpg_save_purchase_order`, `cpg_save_production_order`, `cpg_save_transfer`, `cpg_post_goods_issue`, `cpg_post_goods_receipt`, `cpg_post_production_completion`, `cpg_transfer_move`, `cpg_stock_correction`, `cpg_stock_import`, `cpg_document_close`, `cpg_reverse`, `cpg_revoke_token`, and the admin's `cpg_save_material`, `cpg_material_conversion`, `cpg_save_named_record`, `cpg_save_planning_parameter`, `cpg_save_safety_stock_target`, `cpg_save_forecast`, `cpg_save_bom`, `cpg_import`, `cpg_set_read_only`, `cpg_users`. Their discriminator values (`action`, `kind`, `entity`, `scope`) are part of the contract too. The other argument names are the API's own field names, which section 4 already protects.
+- **Resources:** `cpg://help/{topic id}`, by the help topic ids of section 4.
+- **Environment variables:** `CPG_API_TOKEN` (required), `CPG_BASE_URL` (default `https://cpg.baby`), `CPG_TENANT` (`test` or `prod`, default `test`).
+- **The command:** `cpg-mcp`, run with `uvx --from "git+https://github.com/Piotr12/CPG#subdirectory=mcp" cpg-mcp`.
+
+**Breaking:** renaming or removing a tool, a discriminator value or a variable, or changing a default. **Required path:** keep the old name as an alias for one release, and say so in `mcp/README.md`. Adding a tool, an action or an optional argument is additive. `mcp/cpg_mcp/catalogue.json` is a build artefact, not protected: `npm run mcp:catalogue` regenerates it from the routes, and `catalogue.test.ts` fails while the committed copy is stale.
+
 ## Not protected
 
 - **`@cpg/*` package exports.** The workspace packages are private, unpublished and consumed only inside this monorepo. Change them freely, but update every caller in the same PR (typecheck enforces it).

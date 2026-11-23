@@ -3,7 +3,7 @@ import path from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import { API_OPERATIONS, type ApiOperation, type OperationRole, type OperationWrite } from "../packages/app/src/api-catalogue/operations";
 
-// The operation registry describes every API route handler (spec .ai/specs/2026-11-22--0818UTC-local-mcp-server.md,
+// The operation registry describes every API route handler (spec .ai/specs/implemented/2026-11-22--0818UTC-local-mcp-server.md,
 // step 3), and the MCP server builds its tools from it. This walks the route files as tests/api-writes.test.ts does
 // and fails when the two disagree, so API parity (R07) can't decay silently. Known limit: a named schema is proven
 // to be on the request's path, not to be its only parse.

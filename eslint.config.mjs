@@ -88,8 +88,9 @@ const eslintConfig = defineConfig([
   { rules: { "no-console": ["error", { allow: ["info", "warn", "error"] }] } },
   { files: ["packages/*/scripts/**", "tests/**"], rules: { "no-console": "off" } },
   // Override default ignores of eslint-config-next (paths are relative to the repo root).
-  // .ai/tmp/ holds the om-* skills' temporary git worktrees, full repo copies.
-  globalIgnores(["**/.next/**", "**/out/**", "**/build/**", "**/next-env.d.ts", "data/**", "coverage/**", ".ai/tmp/**"]),
+  // .ai/tmp/ holds the om-* skills' temporary git worktrees, full repo copies. mcp/.venv/ is uv's Python
+  // environment for cpg-mcp, whose packages ship JavaScript of their own.
+  globalIgnores(["**/.next/**", "**/.venv/**", "**/out/**", "**/build/**", "**/next-env.d.ts", "data/**", "coverage/**", ".ai/tmp/**"]),
 ]);
 
 export default eslintConfig;

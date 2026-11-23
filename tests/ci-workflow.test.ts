@@ -117,3 +117,24 @@ test("unit-coverage merges every shard's blob and the timing tests', and enforce
   assert.match(run, /--merge-reports=blob-reports$/);
   assert.doesNotMatch(run, /thresholds/);
 });
+
+// cpg-mcp (spec 2026-11-22--0818UTC-local-mcp-server, Q8 B) keeps the repository's rules in Python: lint, format,
+// types, 100% line and branch coverage, and a dependency audit. deploy.yml calls this workflow, so it gates deploys.
+test("the python job checks cpg-mcp in full, within a limit, with its own limits on what reaches PyPI", () => {
+  const python = workflow.jobs.python as Job & { defaults?: { run?: { "working-directory"?: string } } };
+  assert.ok(python, "no python job");
+  assert.equal(python["timeout-minutes"], 10);
+  assert.equal(python.defaults?.run?.["working-directory"], "mcp");
+  const runs = python.steps.map((step) => step.run).filter((run) => run !== undefined);
+  assert.deepEqual(runs, [
+    "uv sync --locked",
+    "uv run ruff check .",
+    "uv run ruff format --check .",
+    "uv run pyright",
+    "uv run pytest --cov=cpg_mcp --cov-branch --cov-fail-under=100",
+    "uv run pip-audit --skip-editable",
+  ]);
+  for (const command of ["uv sync --locked", "uv run pip-audit --skip-editable"]) {
+    assert.equal(typeof python.steps.find((step) => step.run === command)?.["timeout-minutes"], "number", command);
+  }
+});

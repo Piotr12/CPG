@@ -1,6 +1,6 @@
 # Local MCP server: CPG's API as agent tools, over stdio, in Python
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-11-22 08:18 UTC
 **Issue:** #393 (owner's answers Q1–Q12 recorded there) · **Follow-up:** #398, the onboarding skill, blocked by this spec · **Design authority:** `.ai/specs/product-brief.md` (R03, R05, R07, R08, R10, D04), `BACKWARD_COMPATIBILITY.md` §4, implemented specs `2026-10-19--1053UTC-api-tokens` and `2026-10-19--1548UTC-api-idempotency`
 
@@ -237,10 +237,40 @@ The spec relies on R03, R05, R06, R07 (API parity; tokens are created in the UI 
 
 ## Acceptance criteria
 
-- [ ] `GET /api/me` answers the caller's id, username, role and token name to a session or a bearer, 401 without either, and never a secret.
-- [ ] Every route handler (116 today) has a registry entry, and `tests/api-catalogue.test.ts` fails when a route is added without one.
-- [ ] `npm run mcp:catalogue` reproduces the committed `catalogue.json` exactly, and a test fails when it drifts.
-- [ ] `uvx --from ./mcp cpg-mcp` with only `CPG_API_TOKEN` set starts against `https://cpg.baby` on tenant `test`. A normal user's token lists 24 tools and the admin's lists 34.
-- [ ] A write retried after a dropped connection reports `replayed: true` and writes once. A stale Test generation is an error, never a silent retry. A read-only refusal reaches the agent with its code.
-- [ ] Every catalogue operation is fronted by a tool or listed in `exclusions.py` (Test reset, two templates), and every Prod-capable write tool's description carries the "ask the human" sentence.
-- [ ] The CI `python` job passes ruff, pyright, `pip-audit` and pytest at 100% line and branch coverage. `npm run test:coverage` stays at 100%.
+- [x] `GET /api/me` answers the caller's id, username, role and token name to a session or a bearer, 401 without either, and never a secret.
+- [x] Every route handler (116 today) has a registry entry, and `tests/api-catalogue.test.ts` fails when a route is added without one.
+- [x] `npm run mcp:catalogue` reproduces the committed `catalogue.json` exactly, and a test fails when it drifts.
+- [x] `uvx --from ./mcp cpg-mcp` with only `CPG_API_TOKEN` set starts against `https://cpg.baby` on tenant `test`. A normal user's token lists 24 tools and the admin's lists 34.
+- [x] A write retried after a dropped connection reports `replayed: true` and writes once. A stale Test generation is an error, never a silent retry. A read-only refusal reaches the agent with its code.
+- [x] Every catalogue operation is fronted by a tool or listed in `exclusions.py` (Test reset, two templates), and every Prod-capable write tool's description carries the "ask the human" sentence.
+- [x] The CI `python` job passes ruff, pyright, `pip-audit` and pytest at 100% line and branch coverage. `npm run test:coverage` stays at 100%.
+
+## Implementation notes
+
+Shipped as two PRs, as Phasing says: #402 (Phase 1, the app side) and #403 (Phases 2–4, `mcp/`, which closes #393). Run plans: `.ai/pipeline/runs/2026-11-22--0837UTC-local-mcp-server-app-side.md` and `.ai/pipeline/runs/2026-11-22--0905UTC-local-mcp-server-python.md`.
+
+Where the build differs from the text above, and why:
+
+- **A9: one flat object schema per tool, not a top-level `oneOf`.** The Claude API refuses a tool `input_schema` with a top-level `oneOf`/`anyOf`/`allOf`, so a `cpg_save_*` tool's schema is one object. It holds the discriminators as enums and the union of every action's fields; a field two actions shape differently becomes a property-level `anyOf`. The description lists each action's required fields. The per-branch check A9 asked for still happens, against the chosen operation's own schema, so a local error names that action's fields. An argument the union offers but the chosen action doesn't take is refused ("Not accepted by action=create"), so a lenient server schema can't drop it silently. Every call is also validated against the tool's advertised schema, which `mcp` 2.3 checks only on its HTTP transport.
+- **The catalogue builder lives in the app.** `buildCatalogue()` is `packages/app/src/api-catalogue/catalogue.ts`; `packages/app/scripts/mcp-catalogue.ts` only writes its output.
+- **Schemas.**
+  - `reports.variance` names `varianceReportQuerySchema`, the schema its service parses.
+  - The Test reset's `write` is `tenant`.
+  - `toToolJsonSchema` also drops `required` from a schema that accepts `{}`, for the demand review's `z.preprocess` defaults.
+- **Patterns.** The catalogue keeps the validators' ECMA-262 patterns (`\p{L}`), and the Python side validates `pattern` with the `regex` package, since `re` can't compile them.
+- **Tool arguments.**
+  - Arguments use the API's own field names: `cpg_preferences(locale?, theme?)`, `cpg_set_read_only(tenant, readOnly)`.
+  - `cpg_reverse` names its second ID as the API does (`completionId`, `postingId`), not `sub_id`.
+  - `cpg_post_production_completion` takes `action: post | preview` rather than a `preview` flag.
+- **Retry (A4).** It applies to reads too, which is harmless.
+- **Step 15, the manual run.** It ran on 2026-11-22 against a local standalone build (`node packages/app/server.js`, Test tenant), with an admin token created through `/admin/tokens` and `uvx --from ./mcp cpg-mcp` driven over stdio by the SDK's client:
+  - the server listed 34 tools;
+  - `cpg_whoami` answered admin and the token's name;
+  - `cpg_list` returned the 30 materials;
+  - a bad `sort` was refused locally with a field error;
+  - `cpg_mrp_run` (manual) created run 00000001;
+  - `cpg_report kind=mrp` showed 39 proposals for one pair;
+  - `cpg_mrp_accept_proposal` created requisition 00000006, and a second accept answered `MRP_PROPOSAL_ACCEPTED`.
+
+  The transcript is on #403.
+- **Follow-up.** The onboarding skill and MCP prompt are #398.
