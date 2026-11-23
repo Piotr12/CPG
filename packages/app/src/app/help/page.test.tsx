@@ -30,6 +30,7 @@ describe("HelpPage", () => {
       "Tenants",
       "Managing users",
       "API tokens",
+      "Using CPG from an AI agent",
       "Test and Prod",
       "The Test dataset's planning week",
       "The Global audit",
