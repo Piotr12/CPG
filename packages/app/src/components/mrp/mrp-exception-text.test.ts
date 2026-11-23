@@ -33,8 +33,8 @@ describe("exceptionText (E18-S03): an exception's label and text by code and par
   });
 
   it("names an unreadable record by its kind, with its document when there is one", () => {
-    expect(english("INVALID_UOM_CONVERSION", { record: "bom-line", document: "00000004/1/2" })).toEqual({
-      label: "Unit not convertible", text: "A stored BOM line of this material, 00000004/1/2, can't be read, so MRP proposes no supply for it.",
+    expect(english("INVALID_UOM_CONVERSION", { record: "production-order", document: "00000007" })).toEqual({
+      label: "Unit not convertible", text: "A stored production order of this material, 00000007, can't be read, so MRP proposes no supply for it.",
     });
     expect(english("INVALID_UOM_CONVERSION", { record: "stock-balance" }).text).toBe("A stored stock balance of this material can't be read, so MRP proposes no supply for it.");
     expect(english("INVALID_UOM_CONVERSION", { record: "a-newer-record" }).text).toBe(en.mrp.explanations.exceptions.codes.INVALID_UOM_CONVERSION.plain);
@@ -56,6 +56,23 @@ describe("exceptionText (E18-S03): an exception's label and text by code and par
     expect(english("INVALID_UOM_CONVERSION", { record: "customer-order-line" }).text).toBe("A stored customer order line of this material can't be read, so MRP proposes no supply for it.");
     // Another record's line keeps its document as stored: a purchase-order line counts from 1 already.
     expect(english("INVALID_UOM_CONVERSION", { record: "purchase-order-line", document: "00000003/1" }).text).toContain(", 00000003/1, ");
+  });
+
+  it("names an unreadable BOM line from 1, as the BOM form does, though its document holds the stored position from 0 (#396)", () => {
+    // `BOM/revision/position`, from a BOM's revision or a production order's pinned one (`BACKWARD_COMPATIBILITY.md`).
+    const params = { record: "bom-line", document: "00000004/2/0" };
+    expect(english("INVALID_UOM_CONVERSION", params)).toEqual({
+      label: "Unit not convertible", text: "A stored BOM line of this material, BOM 00000004, revision 2, line 1, can't be read, so MRP proposes no supply for it.",
+    });
+    expect(english("INVALID_UOM_CONVERSION", { ...params, document: "00000004/2/9" }).text).toContain("BOM 00000004, revision 2, line 10,");
+    expect(exceptionText(exception("INVALID_UOM_CONVERSION", params), { ...context, locale: "pl" }, pl.mrp.explanations.exceptions).text).toBe(
+      "Zapisanej pozycji BOM-u tego materiału (BOM 00000004, rewizja 2, pozycja 1) nie da się odczytać, więc MRP nie proponuje dla niego podaży.",
+    );
+    // A document of another shape, or none at all, is named as stored or left out, never guessed.
+    expect(english("INVALID_UOM_CONVERSION", { ...params, document: "00000004/0" }).text).toBe("A stored BOM line of this material, 00000004/0, can't be read, so MRP proposes no supply for it.");
+    expect(english("INVALID_UOM_CONVERSION", { record: "bom-line" }).text).toBe("A stored BOM line of this material can't be read, so MRP proposes no supply for it.");
+    // Only a BOM line's document is read as `BOM/revision/position`: another record keeps it as stored.
+    expect(english("INVALID_UOM_CONVERSION", { record: "production-order", document: "00000004/2/0" }).text).toContain(", 00000004/2/0, ");
   });
 
   it("explains No Feasible BOM as a provisional plan", () => {

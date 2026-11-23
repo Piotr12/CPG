@@ -2183,6 +2183,7 @@ export const pl: Messages = {
             text: "Zapisanego rekordu tego materiału ({record}) nie da się odczytać, więc MRP nie proponuje dla niego podaży.",
             document: "Zapisanego rekordu tego materiału ({record}, {document}) nie da się odczytać, więc MRP nie proponuje dla niego podaży.",
             orderLine: "Zapisanej pozycji zamówienia klienta tego materiału (zamówienie klienta {order}, pozycja {line}) nie da się odczytać, więc MRP nie proponuje dla niego podaży.",
+            bomLine: "Zapisanej pozycji BOM-u tego materiału (BOM {bom}, rewizja {revision}, pozycja {line}) nie da się odczytać, więc MRP nie proponuje dla niego podaży.",
             plain: "Zapisanej ilości, przelicznika jednostki lub daty tego materiału nie da się odczytać, więc MRP nie proponuje dla niego podaży.",
             records: {
               "stock-balance": "stan zapasu", "customer-order-line": "pozycja zamówienia klienta", forecast: "prognoza", "safety-stock-target": "zapas bezpieczeństwa",
