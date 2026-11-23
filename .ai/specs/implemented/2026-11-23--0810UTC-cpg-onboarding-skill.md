@@ -1,6 +1,6 @@
 # CPG onboarding skill for MCP agents, and downloads from the homepage
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-11-23 08:10 UTC
 **Issue:** #398 (split out of #393, decisions Q4, Q5, Q10, Q11, Q12 recorded there) · **Owner's extension (2026-11-23, on the run that picked #398 up):** "make sure that the skill and mcp python package are easily downloadable from the homepage of the app … This should include an installation manual for windows/linux/Mac as well." · **Design authority:** implemented spec `2026-11-22--0818UTC-local-mcp-server`, `BACKWARD_COMPATIBILITY.md` §4 and §6, `.ai/specs/product-brief.md` (R03, R05, R09, R10)
 
@@ -207,9 +207,21 @@ One implementation PR, in two parts that touch disjoint files:
 
 ## Acceptance criteria
 
-- [ ] `mcp/cpg_mcp/skills/cpg-onboarding/SKILL.md` exists, and the MCP serves its body as the prompt `cpg_onboarding`, read from the same file.
-- [ ] Every tool name and help topic id in the skill exists, enforced by a test.
-- [ ] The homepage offers both downloads and links to `/agents`. `/agents` gives working install commands for Windows, macOS and Linux, in EN and PL, built from the serving origin.
-- [ ] `uvx --from <CPG>/downloads/cpg-mcp-{hash}.zip cpg-mcp` installs and starts the server with no git and no checkout. An old hash redirects to the current archive.
-- [ ] An agent given only the skill and the MCP, on Test with the tiny demo dataset, runs the daily loop end to end, and the run is recorded as evidence on the PR.
-- [ ] Python coverage stays at 100%, and `npm run test:coverage` stays at 100%.
+- [x] `mcp/cpg_mcp/skills/cpg-onboarding/SKILL.md` exists, and the MCP serves its body as the prompt `cpg_onboarding`, read from the same file.
+- [x] Every tool name and help topic id in the skill exists, enforced by a test.
+- [x] The homepage offers both downloads and links to `/agents`. `/agents` gives working install commands for Windows, macOS and Linux, in EN and PL, built from the serving origin.
+- [x] `uvx --from <CPG>/downloads/cpg-mcp-{hash}.zip cpg-mcp` installs and starts the server with no git and no checkout. An old hash redirects to the current archive.
+- [x] An agent given only the skill and the MCP, on Test with the tiny demo dataset, runs the daily loop end to end, and the run is recorded as evidence on the PR.
+- [x] Python coverage stays at 100%, and `npm run test:coverage` stays at 100%.
+
+## Implementation notes
+
+- **Phase 1** (`mcp/`): the skill is about 2,000 words. `onboarding.py` parses its frontmatter, and `CpgServer` serves `cpg_onboarding` through `on_list_prompts`/`on_get_prompt`. `tests/test_skill_text.py` matches help topics case-insensitively, after the first version missed the glossary's capitalised "Help topic". A `uv build` wheel contains `cpg_mcp/skills/cpg-onboarding/SKILL.md`.
+- **Phase 2** (`packages/app`):
+  - `agent-downloads/{archive,sources,downloads}.ts`, the two download routes, `/agents`, the homepage section, and help topic `ai-agents`.
+  - `fillNodes` moved from the transfers screen to `i18n/fill-nodes.tsx`, so the guide reuses it.
+  - `outputFileTracingIncludes` also lists `/` and `/agents`, which name the archive by its hash.
+  - The new help topic regenerated `mcp/cpg_mcp/catalogue.json`.
+- **A10, resolved.** Codex's user skills folder is `~/.agents/skills/` (https://developers.openai.com/codex/skills), so the guide lists it beside Claude Code's `~/.claude/skills/`. The guide also tells unattended `codex exec` users about `default_tools_approval_mode = "approve"` (https://developers.openai.com/codex/config-reference). Without it, Codex refuses every non-read-only MCP tool in `exec`.
+- **A11, deviation.** The acceptance run used Codex CLI 0.164.0, not Claude Code: headless `claude -p` refused to start on this machine because its login had expired and could not be renewed. Codex is one of the agents #398 names. The record is in `.ai/pipeline/runs/2026-11-23--0813UTC-cpg-onboarding-skill/acceptance-run.md`.
+- **Install from the served zip.** Checked with a fresh `UV_CACHE_DIR`: `uvx --from <served>/downloads/cpg-mcp-<hash>.zip cpg-mcp` installs and starts with no git, and so does an old hash through its 307.

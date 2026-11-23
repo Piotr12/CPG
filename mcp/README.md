@@ -52,7 +52,7 @@ From a checkout, use `uvx --from ./mcp cpg-mcp` instead.
 
 The server ships an onboarding skill, `cpg_mcp/skills/cpg-onboarding/SKILL.md`. It covers orientation, a glossary, the daily planning loop, CPG's hard rules and the safety rules. There are two ways to give it to the agent:
 
-- **As a skill.** Download it from CPG's homepage (`/downloads/cpg-onboarding-skill.zip`) and unpack it into the agent's skills folder: `~/.claude/skills/` for Claude Code. `/agents` gives a one-line install for each OS.
+- **As a skill.** Download it from CPG's homepage (`/downloads/cpg-onboarding-skill.zip`) and unpack it into the agent's skills folder: `~/.claude/skills/` for Claude Code, `~/.agents/skills/` for Codex. `/agents` gives a one-line install for each OS.
 - **As the MCP prompt `cpg_onboarding`**, for any client, with nothing to install. In Claude Code it is the command `/mcp__cpg__cpg_onboarding`.
 
 Both are the same file. The server reads it at startup and keeps no second copy.
