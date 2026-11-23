@@ -3,7 +3,7 @@
 **Date:** 2026-11-23 11:10 UTC
 **Agent:** Claude Code / Opus 5.5 (`om-auto-fix-issue`, dispatched by cezar)
 **Spec:** none (bug #396)
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -29,3 +29,10 @@ The Invalid UoM Conversion text in the MRP Explanations names a BOM's first line
 - `npm run test:coverage`: 698 files, 5,840 passed (2 skipped); 100% statements, branches, functions and lines.
 - `npm run build`: the first run generated every page, then exited 1 on the Next.js `SecurityFatalError` upgrade nudge (as in #390's run). The retry exited 0. The upgrade is out of scope and was not run.
 - No integration file changed: the exception needs a row corrupted around the services, which the image-driven suite can't write (as in #390).
+- PR #409. An independent review (`om-auto-review-pr`) approves, posted as a comment because the account can't approve its own PR: no actionable findings.
+- UI ([evidence](https://github.com/Piotr12/CPG/pull/409#issuecomment-7099692213)): the PR head's `next start` on a throwaway `DATA_DIR` (Docker wasn't running). BOM 00000005 was saved once to make revision 2, and its first line was corrupted to `'3,5'`, then Run MRP. The Explanations read "BOM 00000005, revision 2, line 1" and "(BOM 00000005, rewizja 2, pozycja 1)". After the restore, the edit form names that row "Line 1" / "Wiersz 1". Screenshots are on the `qa-evidence` branch under `pr-409/`.
+- CI: watched on the PR after this commit (see the PR's CI result comment).
+
+## Follow-ups
+
+- None for the code. Polish says "pozycja" in the Explanations and "Wiersz" in the BOM form, as #395 left it for order lines. Aligning the wording would be a separate copy decision.
