@@ -55,7 +55,7 @@ export const MRP_ROW_CHUNK = 500;
 export const MRP_RANK_YIELD_MS = 50;
 
 /** Where the ranges of the previous run's row IDs split, by first hex digit. */
-const ID_BOUNDS = [..."48c"];
+const ID_BOUNDS = ["4", "8", "c"];
 /**
  * The previous run's rows are deleted in four ranges of their random UUIDs, yielding between them (#400): at ten
  * times the worst case, one delete of its ~98,000 rows was the run's longest stall once the engine yielded. The
