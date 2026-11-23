@@ -10,11 +10,12 @@ import type { Messages } from "../../i18n/messages/en";
 import { fill, localeQuantity } from "../forms/form-labels";
 import { PageLinks } from "../layout/page-links";
 import { MaterialLocationFilters } from "../reports/material-location-filters";
+import { groupBy } from "./group-by";
 import { materialsByCode } from "./mrp-bom-rejections";
 import { MrpExplanations } from "./mrp-explanations";
 import { MrpMarks, shortDate } from "./mrp-marks";
 import { MrpProposals } from "./mrp-proposals";
-import { MrpShortages, shortagesByDate } from "./mrp-shortages";
+import { MrpShortages } from "./mrp-shortages";
 
 interface MrpReportProps {
   tenant: { code: string };
@@ -189,14 +190,15 @@ function PlanDays({ plan, locale, labels: t }: { plan: MrpPlanView; locale: Loca
     pin: PINNED_DAY_FIGURES.has(key) ? "end" : undefined,
     cell: (day) => <span data-mrp-figure={key} className={cn(negative(day[key]) && "font-medium text-danger")}>{localeQuantity(day[key], locale)}</span>,
   });
-  // Grouped once, not filtered once per day (#391).
-  const shortages = shortagesByDate(plan.shortages);
+  // Grouped once, not filtered once per day (#391, #397).
+  const marks = groupBy(plan.marks, ({ date }) => date);
+  const shortages = groupBy(plan.shortages, ({ date }) => date);
   const columns: DataTableColumn<MrpBucketView>[] = [
     { id: "date", header: t.figures.date, kind: "date", cell: (day) => <span data-mrp-date>{day.date}</span> },
     ...DAY_FIGURES.map(figure),
     // Last, so the columns existing readers count keep their places (lesson 2026-11-01).
     { id: "warnings", header: t.warnings, kind: "text", className: "whitespace-normal", cell: (day) => (
-      <MrpMarks marks={plan.marks.filter(({ date }) => date === day.date)} unit={plan.baseUnit} locale={locale} labels={t.marks} />
+      <MrpMarks marks={marks.get(day.date) ?? []} unit={plan.baseUnit} locale={locale} labels={t.marks} />
     ) },
     // After Warnings, so every column before it keeps its place (#380 spec Q5, lesson 2026-11-01).
     // Wide enough that an entry reads on a line or two; the table scrolls in its own region anyway (#311).
