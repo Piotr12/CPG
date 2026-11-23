@@ -13,6 +13,7 @@ from mcp.client import Client
 from cpg_mcp.catalogue import Catalogue
 from cpg_mcp.client import CpgClient
 from cpg_mcp.config import Config
+from cpg_mcp.onboarding import Skill, load_skill
 from cpg_mcp.server import INSTRUCTIONS, CpgServer, StartupError, decoded_arguments, serve, start, without_credentials
 from cpg_mcp.tools.base import Tool, ToolContext
 from tests.conftest import ADMIN, TOKEN, USER, ok, refused
@@ -210,3 +211,31 @@ async def test_never_prints_credentials_in_the_base_url(api: respx.MockRouter, c
 
     assert "pa55" not in str(raised.value)
     assert "CPG_BASE_URL=https://cpg.test)" in str(raised.value)
+
+
+async def test_serves_the_onboarding_skill_as_a_prompt(context: Context) -> None:
+    skill = load_skill()
+    async with Client(CpgServer(context()).build()) as client:
+        prompts = (await client.list_prompts()).prompts
+        prompt = await client.get_prompt("cpg_onboarding")
+
+    assert [(p.name, p.title, p.description, p.arguments) for p in prompts] == [
+        ("cpg_onboarding", "CPG onboarding", skill.description, None)
+    ]
+    assert prompt.description == skill.description
+    assert len(prompt.messages) == 1
+    assert prompt.messages[0].role == "user"
+    content = prompt.messages[0].content
+    assert isinstance(content, types.TextContent)
+    assert content.text == skill.body
+
+
+async def test_refuses_an_unknown_prompt(context: Context) -> None:
+    server = CpgServer(context(), skill=Skill(description="d", body="b\n"))
+
+    with pytest.raises(ValueError, match="No such prompt: cpg_other"):
+        await server.get_prompt(None, types.GetPromptRequestParams(name="cpg_other"))
+
+
+def test_tells_the_agent_about_the_onboarding_prompt() -> None:
+    assert "Load the prompt cpg_onboarding" in INSTRUCTIONS
