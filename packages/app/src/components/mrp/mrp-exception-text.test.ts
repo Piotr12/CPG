@@ -42,6 +42,22 @@ describe("exceptionText (E18-S03): an exception's label and text by code and par
     expect(english("INVALID_UOM_CONVERSION").text).toBe(en.mrp.explanations.exceptions.codes.INVALID_UOM_CONVERSION.plain);
   });
 
+  it("names an unreadable customer-order line from 1, as the order screens do, though its document holds the stored position from 0 (#390)", () => {
+    const params = { record: "customer-order-line", document: "00000012/0" };
+    expect(english("INVALID_UOM_CONVERSION", params)).toEqual({
+      label: "Unit not convertible", text: "A stored customer order line of this material, customer order 00000012, line 1, can't be read, so MRP proposes no supply for it.",
+    });
+    expect(english("INVALID_UOM_CONVERSION", { ...params, document: "00000012/9" }).text).toContain("customer order 00000012, line 10,");
+    expect(exceptionText(exception("INVALID_UOM_CONVERSION", params), { ...context, locale: "pl" }, pl.mrp.explanations.exceptions).text).toBe(
+      "Zapisanej pozycji zamówienia klienta tego materiału (zamówienie klienta 00000012, pozycja 1) nie da się odczytać, więc MRP nie proponuje dla niego podaży.",
+    );
+    // A document without a position, or none at all, is named as stored or left out, never guessed.
+    expect(english("INVALID_UOM_CONVERSION", { ...params, document: "00000012" }).text).toBe("A stored customer order line of this material, 00000012, can't be read, so MRP proposes no supply for it.");
+    expect(english("INVALID_UOM_CONVERSION", { record: "customer-order-line" }).text).toBe("A stored customer order line of this material can't be read, so MRP proposes no supply for it.");
+    // Another record's line keeps its document as stored: a purchase-order line counts from 1 already.
+    expect(english("INVALID_UOM_CONVERSION", { record: "purchase-order-line", document: "00000003/1" }).text).toContain(", 00000003/1, ");
+  });
+
   it("explains No Feasible BOM as a provisional plan", () => {
     expect(english("NO_FEASIBLE_BOM", { date: "2026-11-09", missing: "" })).toEqual({ label: "No Feasible BOM", text: en.mrp.explanations.exceptions.codes.NO_FEASIBLE_BOM.text });
   });

@@ -167,6 +167,7 @@ describe("@cpg/core", () => {
       "tenantScope",
       "tenantServerAction",
       "toDbOptions",
+      "toToolJsonSchema",
       "uiActor",
       "validationError",
       "versionConflict",

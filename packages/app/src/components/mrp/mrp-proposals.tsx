@@ -5,6 +5,7 @@ import { fill } from "../../i18n/fill";
 import type { Messages } from "../../i18n/messages/en";
 import { localeQuantity } from "../forms/form-labels";
 import { AcceptProposalButton } from "./accept-proposal-button";
+import { groupBy } from "./group-by";
 import { WhyBom, type MaterialsByCode } from "./mrp-bom-rejections";
 import { MrpMarks } from "./mrp-marks";
 import { orderStart } from "./order-start";
@@ -78,9 +79,11 @@ export function MrpProposals({ tenant, run, plan, today, materials, accept, loca
       />
     );
   };
-  // A late or Beyond Horizon proposal carries the same warning as its need date's day (E18-S02).
+  // A late or Beyond Horizon proposal carries the same warning as its need date's day (E18-S02). Grouped once, not
+  // filtered once per proposal (#397).
+  const timing = groupBy(plan.marks.filter((mark) => "proposal" in mark), (mark) => mark.proposal);
   const needDate = (proposal: MrpProposalView) => {
-    const marks = plan.marks.filter((mark) => "proposal" in mark && mark.proposal === proposal.id);
+    const marks = timing.get(proposal.id) ?? [];
     return (
       <div className="flex flex-col items-start gap-1">
         <span data-mrp-need-date>{proposal.needDate}</span>

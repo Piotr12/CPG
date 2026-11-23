@@ -56,3 +56,10 @@ next-env.d.ts
 /.ai/qa/test-env.env
 /.ai/qa/test-env-build-cache.json
 /.ai/qa/test-env.lock/
+
+# python (mcp/, the cpg-mcp server)
+.venv/
+__pycache__/
+.coverage
+.pytest_cache/
+.ruff_cache/

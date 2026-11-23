@@ -13,6 +13,7 @@ export * from "./http/parse-input";
 export { retryingStaleSnapshot } from "./http/request-transaction";
 export * from "./http/result";
 export * from "./http/server-action";
+export { toToolJsonSchema, type ToolJsonSchema } from "./http/tool-json-schema";
 export * from "./http/tenant-server-action";
 export * from "./services/api-tokens/api-token.service";
 export * from "./services/auth/actor";
