@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { test } from "vitest";
 import { parse } from "yaml";
 
-type Step = { name?: string; run?: string; "timeout-minutes"?: number };
+type Step = { name?: string; run?: string; uses?: string; with?: Record<string, unknown>; "timeout-minutes"?: number };
 type Job = {
   "timeout-minutes"?: number;
   strategy?: { "fail-fast"?: boolean; matrix?: { shard?: number[] } };
@@ -76,6 +76,11 @@ const unitRun = (candidate: Job, command: string) => {
   assert.ok(step, `no step runs ${command}`);
   return step.run!.replace(/\s+/g, " ");
 };
+const upload = (candidate: Job) => {
+  const step = candidate.steps.find((one) => one.uses?.startsWith("actions/upload-artifact@"));
+  assert.ok(step?.with, "no step uploads the blob");
+  return step.with;
+};
 
 // The whole suite on one runner took 8.6 to over 10 minutes (#338).
 test("the unit suite runs as numbered shards, each writing a blob of its results and coverage without the threshold", () => {
@@ -90,7 +95,8 @@ test("the unit suite runs as numbered shards, each writing a blob of its results
   // No shard covers every file, so each skips the threshold; the merge enforces it.
   assert.match(run, /--coverage\.thresholds\.100=false/);
   assert.match(run, /--reporter=blob/);
-  assert.match(run, /--outputFile\.blob=blob-reports\/blob-\$\{\{ matrix\.shard \}\}\.json/);
+  assert.match(run, /--outputFile\.blob=blob-reports\/blob-\$\{\{ matrix\.shard \}\}-\$\{\{ github\.run_attempt \}\}\.json/);
+  assert.equal(upload(units).name, "unit-blob-${{ matrix.shard }}-${{ github.run_attempt }}");
 });
 
 // Beside the rest of the suite, the MRP timing test's bound measured the runner's other test files too and
@@ -104,7 +110,8 @@ test("the timing tests run on a runner of their own, one file at a time, writing
   assert.match(run, /--no-file-parallelism/);
   assert.match(run, /--coverage\.thresholds\.100=false/);
   assert.match(run, /--reporter=blob/);
-  assert.match(run, /--outputFile\.blob=blob-reports\/blob-timing\.json/);
+  assert.match(run, /--outputFile\.blob=blob-reports\/blob-timing-\$\{\{ github\.run_attempt \}\}\.json/);
+  assert.equal(upload(timing).name, "unit-blob-timing-${{ github.run_attempt }}");
   assert.ok((timing["timeout-minutes"] ?? 360) >= 20);
 });
 
@@ -116,6 +123,20 @@ test("unit-coverage merges every shard's blob and the timing tests', and enforce
   const run = unitRun(merge, "npm run test:coverage");
   assert.match(run, /--merge-reports=blob-reports$/);
   assert.doesNotMatch(run, /thresholds/);
+});
+
+// Re-running only a failed shard uploads a second blob for it to the same run, and the download takes every attempt's.
+// Each blob is named after its attempt, and unit-coverage deletes the ones a newer attempt replaced before merging,
+// so the re-run's result counts instead of the failure it fixed (#399).
+test("unit-coverage merges only each shard's newest attempt", () => {
+  const download = merge.steps.findIndex((step) => step.uses?.startsWith("actions/download-artifact@"));
+  assert.ok(download >= 0, "unit-coverage downloads no blobs");
+  assert.deepEqual(merge.steps[download].with, { pattern: "unit-blob-*", path: "blob-reports/", "merge-multiple": true });
+  const runs = merge.steps.slice(download + 1).map((step) => step.run);
+  assert.deepEqual(runs, [
+    "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/delete-stale-blobs.ts blob-reports",
+    "npm run test:coverage -- --merge-reports=blob-reports",
+  ]);
 });
 
 // cpg-mcp (spec 2026-11-22--0818UTC-local-mcp-server, Q8 B) keeps the repository's rules in Python: lint, format,
