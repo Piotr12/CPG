@@ -41,9 +41,12 @@ export function exceptionText({ code, params }: MrpExceptionView, context: Excep
     case "INVALID_UOM_CONVERSION": {
       const labels = t.codes.INVALID_UOM_CONVERSION;
       const record = params.record !== undefined && Object.hasOwn(labels.records, params.record) ? labels.records[params.record as keyof typeof labels.records] : undefined;
-      // A customer-order line is stored from 0, and the order screens count from 1 (#390); the API keeps the stored position.
+      // Customer-order and BOM lines are stored from 0, and their screens count from 1 (#390, #396); the API keeps the stored position.
+      const line = (position: string) => String(Number(position) + 1);
       const orderLine = params.record === "customer-order-line" ? /^(.+)\/(\d+)$/.exec(params.document ?? "") : null;
-      if (orderLine) return { label: labels.label, text: fill(labels.orderLine, { order: orderLine[1], line: String(Number(orderLine[2]) + 1) }) };
+      if (orderLine) return { label: labels.label, text: fill(labels.orderLine, { order: orderLine[1], line: line(orderLine[2]) }) };
+      const bomLine = params.record === "bom-line" ? /^(.+)\/(\d+)\/(\d+)$/.exec(params.document ?? "") : null;
+      if (bomLine) return { label: labels.label, text: fill(labels.bomLine, { bom: bomLine[1], revision: bomLine[2], line: line(bomLine[3]) }) };
       const template = params.document === undefined ? labels.text : labels.document;
       return { label: labels.label, text: filled(template, { record, document: params.document }) ?? labels.plain };
     }
