@@ -73,6 +73,19 @@ describe("named API tokens", () => {
     expect((await api("/api/tokens", "cpg_not-a-real-token")).status).toBe(401);
   });
 
+  it("tells a token or a session who it is, never the secret (GET /api/me, #393)", async () => {
+    const me = await api("/api/me", secrets.agent1);
+    expect(me.status).toBe(200);
+    expect(me.body.data).toEqual({ id: expect.any(String), username: "tara", role: "user", token: { id: expect.any(String), name: "agent1" } });
+    expect(JSON.stringify(me.body)).not.toContain(secrets.agent1);
+
+    const session = await tara.evaluate<{ id: string; username: string; role: string; token: unknown }>(
+      `fetch("/api/me").then((response) => response.json()).then(({ data }) => data)`,
+    );
+    expect(session).toEqual({ id: me.body.data.id, username: "tara", role: "user", token: null });
+    expect((await api("/api/me", "cpg_not-a-real-token")).status).toBe(401);
+  });
+
   it("keeps names unique per account only (API-003, API-004)", async () => {
     await submitToken(tara, "agent1");
     expect(await tara.text("[role=dialog] [role=alert]")).toBe("You already have a token with that name.");
