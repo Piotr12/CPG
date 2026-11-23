@@ -15,6 +15,48 @@ export const en = {
     flowLabel: "What CPG covers",
     signIn: "Sign in",
     open: "Open CPG",
+    /** The "Use CPG from an AI agent" section (#398); the page builds the download links. */
+    agents: {
+      heading: "Use CPG from an AI agent",
+      text: "Let an AI agent plan in CPG with you: the MCP server gives it CPG's tools, and the skill teaches it how a planner works.",
+      downloadMcp: "Download the MCP server",
+      downloadSkill: "Download the skill",
+      howTo: "How to install",
+    },
+  },
+  /**
+   * The install guide at /agents (#398). Commands, paths, URLs and product names are built in code
+   * (`app/agents/install-commands.ts`) and fill the `{placeholders}`.
+   */
+  agents: {
+    title: "Use CPG from an AI agent",
+    intro: "An AI agent such as {claude} or {codex} can work in CPG for you, with your account's rights: it reads what you can read and changes what you can change. This guide installs the two parts it needs.",
+    osLabel: "Commands for",
+    windowsShell: "On Windows, run every command below in {shell}.",
+    getHeading: "What you get",
+    mcp: "The MCP server: a small program that runs on your computer and gives the agent CPG's API as tools. {uvx} downloads and starts it, so there is nothing else to install.",
+    skill: "The skill: one text file that teaches the agent the daily planning loop, CPG's rules, and when to ask you before changing anything.",
+    downloadMcp: "Download the MCP server",
+    downloadSkill: "Download the skill",
+    uvHeading: "Install uv",
+    uvText: "{uv} runs the MCP server. Install it with this command:",
+    uvAlternative: "Or with {tool}:",
+    uvNewTerminal: "Then open a new terminal, so it finds {uvx}.",
+    tokenHeading: "Create an API token",
+    tokenText: "Sign in to CPG, open {tokens} and create a token named after the agent. Copy its secret straight away: CPG shows it only once. In the commands below, replace {placeholder} with it.",
+    tokensLink: "API tokens",
+    serverHeading: "Add the server to your agent",
+    forAgentRun: "For {agent}, run:",
+    forCodex: "For {agent}, add this to {path}:",
+    codexUnattended: "Codex asks you before a tool changes anything. For unattended runs ({command}), which can't ask, add {setting} under {table}: Codex then runs every CPG tool without asking, so use it on Test.",
+    forOther: "For any other MCP client, add this to its {key} settings:",
+    serverAddress: "These commands point at this CPG, {origin}.",
+    skillHeading: "Install the skill",
+    skillUnzip: "Or unzip the skill's download into {folder}: it holds the {skillFolder} folder.",
+    skillOther: "Any other agent: ask it to load the prompt {prompt}, which the MCP server offers.",
+    checkHeading: "Check it works",
+    checkText: "Start the agent and ask it to call {tool}. It answers with your account, CPG's tenants and whether each one is read-only.",
+    checkFails: "If the server doesn't start, its one-line error names the missing setting or says the token was refused.",
   },
   login: {
     title: "Sign in to CPG",

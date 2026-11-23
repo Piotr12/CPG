@@ -7,6 +7,7 @@ export const HELP_TOPIC_IDS = [
   "admin-home",
   "managing-users",
   "api-tokens",
+  "ai-agents",
   "test-and-prod",
   "test-dataset-week",
   "global-audit",
@@ -55,6 +56,7 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   "admin-home": "/admin",
   "managing-users": "/admin/users",
   "api-tokens": "/admin/tokens",
+  "ai-agents": "/agents",
   "test-and-prod": "/admin/[tenant]",
   "test-dataset-week": "/help/test-dataset",
   "global-audit": "/admin/audit",
@@ -161,6 +163,14 @@ const en: Record<HelpTopicId, HelpText> = {
       "Revoke ends a token at once. A password reset or a deactivation ends all of an account's tokens. Tokens can be listed and revoked through the API too, but only created here.",
       "Every API request that changes something needs an Idempotency-Key header: a fresh value, such as a UUID, for each change. If the answer is lost, send the same request with the same key again within 24 hours: CPG returns the first answer and changes nothing twice. A key reused for a different request is refused.",
       "To change a record (a user, a material or one of its unit conversions, a location, a customer or a supplier), send the version you read with it, from GET /api/users or the tenant's GET routes. If someone changed the record since, CPG refuses with a version conflict and keeps their change: read it again and retry. For writes to the Test tenant, also send the Dataset-Generation header with the generation from GET /api/tenants/test.",
+    ],
+  },
+  "ai-agents": {
+    title: "Using CPG from an AI agent",
+    body: [
+      "An AI agent such as Claude Code or Codex can work in CPG for you through CPG's MCP server, a small program that runs on your computer and calls CPG's API with your API token. The agent can do exactly what your account can, in Test and Prod, and its changes are audited under your account and the token's name. Revoke the token to cut it off.",
+      "The onboarding skill teaches the agent how a planner works in CPG: the daily planning loop, the rules (a posting is corrected by reversing it, never by editing it) and when to ask you first, before any change in Prod. An agent without skills gets the same text from the MCP server as the prompt cpg_onboarding.",
+      "The homepage offers both downloads. How to install, linked beside them, opens the installation guide: its commands for Windows, macOS or Linux install uv, add the server to Claude Code, Codex or any other MCP client, and install the skill. The commands already point at the CPG that showed them; replace <token> with your token's secret.",
     ],
   },
   "test-dataset-week": {
@@ -503,6 +513,14 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Unieważnij natychmiast kończy działanie tokenu. Reset hasła lub dezaktywacja kończy działanie wszystkich tokenów konta. Tokeny można też wyświetlać i unieważniać przez API, ale tworzyć tylko tutaj.",
       "Każde żądanie do API, które coś zmienia, wymaga nagłówka Idempotency-Key: nowej wartości, na przykład UUID, dla każdej zmiany. Jeśli odpowiedź zginie, wyślij to samo żądanie z tym samym kluczem ponownie w ciągu 24 godzin: CPG zwróci pierwszą odpowiedź i niczego nie zmieni dwa razy. Klucz użyty ponownie do innego żądania zostanie odrzucony.",
       "Aby zmienić rekord (użytkownika, materiał lub jeden z jego przeliczników jednostek, lokalizację, klienta lub dostawcę), wyślij wersję, którą odczytałeś z GET /api/users lub z tras GET środowiska. Jeśli ktoś w międzyczasie go zmienił, CPG odmówi z konfliktem wersji i zachowa tamtą zmianę: odczytaj go ponownie i spróbuj jeszcze raz. Przy zapisach w środowisku Test wyślij też nagłówek Dataset-Generation z generacją z GET /api/tenants/test.",
+    ],
+  },
+  "ai-agents": {
+    title: "Korzystanie z CPG przez agenta AI",
+    body: [
+      "Agent AI, na przykład Claude Code lub Codex, może pracować w CPG za ciebie przez serwer MCP CPG: mały program, który działa na twoim komputerze i wywołuje API CPG twoim tokenem API. Agent może dokładnie to, co twoje konto, w środowiskach Test i Prod, a jego zmiany trafiają do audytu pod twoim kontem i nazwą tokenu. Unieważnij token, aby odciąć agenta.",
+      "Umiejętność wprowadzająca uczy agenta, jak pracuje planista w CPG: codziennej pętli planowania, zasad (księgowanie poprawia się, odwracając je, nigdy edytując) i tego, kiedy najpierw zapytać ciebie, zanim zmieni cokolwiek w Prod. Agent bez obsługi umiejętności dostaje ten sam tekst od serwera MCP jako prompt cpg_onboarding.",
+      "Strona główna oferuje oba pliki do pobrania. Obok nich odnośnik Jak zainstalować otwiera przewodnik instalacji: jego polecenia dla systemów Windows, macOS i Linux instalują uv, dodają serwer do Claude Code, Codex lub innego klienta MCP i instalują umiejętność. Polecenia wskazują już na CPG, który je wyświetlił; zastąp <token> sekretem swojego tokenu.",
     ],
   },
   "test-dataset-week": {

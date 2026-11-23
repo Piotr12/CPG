@@ -253,6 +253,7 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
   - Validate every call against the advertised schema (`CpgServer.call_tool`).
   - Refuse an argument the chosen action doesn't take. Most API create schemas are lenient `z.object`s that drop unknown keys, so `active=false` on a material create was silently dropped and reported as a success (#403's review, `ActionTool.run`).
 - **2026-11-22 — The catalogue's patterns need the `regex` package** — the unit fields' Zod patterns use `\p{L}`/`\p{N}`, which Python's `re` (and so `jsonschema`'s default `pattern`) can't compile. `catalogue.validation_errors` swaps in `regex`. Test with a non-ASCII value such as `m²` (#402's review).
+- **2026-11-23 — `uvx` caches a tool by the URL it came from: give each version of a package its own URL** — with uv 0.11.14, a changed zip at the same URL kept running the old code, even with `--refresh` or `--refresh-package`, while a new URL installed the new code at once. So CPG serves the package as `/downloads/cpg-mcp-{hash}.zip` and redirects an old hash to the current one (#398). To test an install by hand, use a fresh `UV_CACHE_DIR`.
 - **2026-11-22 — The integration helpers can't run outside Vitest** — `tests/integration/browser.ts` and friends import `vitest`. A scratch `tsx` script (to create a token for a manual run, say) has to drive the `agent-browser` binary directly, under `bash`, since zsh doesn't word-split `$B` (#403's manual run).
 
 ## Process and agent pipeline (om-* skills)

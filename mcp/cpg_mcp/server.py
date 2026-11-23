@@ -1,4 +1,4 @@
-"""The MCP server: the tools the caller's role may use, and CPG's help topics as resources."""
+"""The MCP server: the tools the caller's role may use, CPG's help topics as resources, and the onboarding prompt."""
 
 import json
 import sys
@@ -16,6 +16,7 @@ from cpg_mcp import __version__
 from cpg_mcp.catalogue import Catalogue, load_catalogue, validation_errors
 from cpg_mcp.client import ApiError, CpgClient
 from cpg_mcp.config import Config
+from cpg_mcp.onboarding import PROMPT_NAME, Skill, load_skill
 from cpg_mcp.tools import all_tools
 from cpg_mcp.tools.base import LOCAL_VALIDATION_MESSAGE, Tool, ToolContext, compact, execute
 
@@ -23,6 +24,7 @@ HELP_URI = "cpg://help/"
 INSTRUCTIONS = (
     "CPG is an MRP II planning tool. Call cpg_whoami first. Every tenant tool defaults to the Test tenant, the sandbox;"
     " Prod holds real data, so ask the human before writing there. cpg_help explains each screen and rule."
+    " Load the prompt cpg_onboarding to learn how a planner works in CPG."
 )
 
 
@@ -59,8 +61,9 @@ def without_credentials(url: str) -> str:
 
 
 class CpgServer:
-    def __init__(self, ctx: ToolContext, tools: list[Tool] | None = None) -> None:
+    def __init__(self, ctx: ToolContext, tools: list[Tool] | None = None, skill: Skill | None = None) -> None:
         self.ctx = ctx
+        self.skill = skill or load_skill()
         self.definitions: dict[str, types.Tool] = {}
         self.tools: dict[str, Tool] = {}
         for tool in tools if tools is not None else all_tools():
@@ -79,6 +82,8 @@ class CpgServer:
             on_call_tool=self.call_tool,
             on_list_resources=self.list_resources,
             on_read_resource=self.read_resource,
+            on_list_prompts=self.list_prompts,
+            on_get_prompt=self.get_prompt,
         )
 
     async def list_tools(self, _ctx: Any, _params: Any) -> types.ListToolsResult:
@@ -118,6 +123,15 @@ class CpgServer:
         if topic is None:
             raise ValueError(f"No such resource: {uri}")
         return types.ReadResourceResult(contents=[types.TextResourceContents(uri=uri, text=topic.as_markdown(), mime_type="text/markdown")])
+
+    async def list_prompts(self, _ctx: Any, _params: Any) -> types.ListPromptsResult:
+        return types.ListPromptsResult(prompts=[types.Prompt(name=PROMPT_NAME, title="CPG onboarding", description=self.skill.description)])
+
+    async def get_prompt(self, _ctx: Any, params: types.GetPromptRequestParams) -> types.GetPromptResult:
+        if params.name != PROMPT_NAME:
+            raise ValueError(f"No such prompt: {params.name}")
+        message = types.PromptMessage(role="user", content=types.TextContent(type="text", text=self.skill.body))
+        return types.GetPromptResult(description=self.skill.description, messages=[message])
 
 
 async def start(config: Config, http: httpx.AsyncClient | None = None, catalogue: Catalogue | None = None) -> ToolContext:
