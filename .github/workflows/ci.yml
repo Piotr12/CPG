@@ -42,7 +42,9 @@ jobs:
   # The unit suite with coverage, split across parallel runners. Whole, it took 8.6 min on a quick runner
   # and over 10 on a slow one (the dataset seed and reset tests). The timing tests run apart, in
   # unit-timing. Each shard writes its results and raw coverage as a blob and skips the threshold, which
-  # no single shard can reach; unit-coverage merges the blobs and enforces it. The limit keeps about twice
+  # no single shard can reach; unit-coverage merges the blobs and enforces it. A blob is named after the
+  # run attempt, so unit-coverage can drop the one a re-run shard replaced (#399); blobs last a day, so a later
+  # re-run needs a fresh run. The limit keeps about twice
   # the whole suite's length (tests/ci-workflow.test.ts).
   unit-tests:
     runs-on: ubuntu-latest
@@ -61,12 +63,12 @@ jobs:
       - run: >-
           npm run test:coverage -- --project=!timing --shard=${{ matrix.shard }}/${{ strategy.job-total }}
           --coverage.thresholds.100=false --reporter=default --reporter=blob
-          --outputFile.blob=blob-reports/blob-${{ matrix.shard }}.json
+          --outputFile.blob=blob-reports/blob-${{ matrix.shard }}-${{ github.run_attempt }}.json
       # A shard whose tests fail still uploads its blob, so the merge reports every failure.
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
-          name: unit-blob-${{ matrix.shard }}
+          name: unit-blob-${{ matrix.shard }}-${{ github.run_attempt }}
           path: blob-reports/
           if-no-files-found: error
           retention-days: 1
@@ -88,11 +90,11 @@ jobs:
       - run: >-
           npm run test:coverage -- --project=timing --no-file-parallelism
           --coverage.thresholds.100=false --reporter=default --reporter=blob
-          --outputFile.blob=blob-reports/blob-timing.json
+          --outputFile.blob=blob-reports/blob-timing-${{ github.run_attempt }}.json
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
-          name: unit-blob-timing
+          name: unit-blob-timing-${{ github.run_attempt }}
           path: blob-reports/
           if-no-files-found: error
           retention-days: 1
@@ -117,6 +119,8 @@ jobs:
           pattern: unit-blob-*
           path: blob-reports/
           merge-multiple: true
+      # Re-running a failed shard leaves the failed attempt's blob in the run too: keep each shard's newest (#399).
+      - run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/delete-stale-blobs.ts blob-reports
       - run: npm run test:coverage -- --merge-reports=blob-reports
 
   build:
