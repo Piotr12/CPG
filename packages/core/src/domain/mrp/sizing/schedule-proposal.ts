@@ -20,3 +20,22 @@ export function scheduleProposal(needDate: string, leadTimeDays: number, today: 
     beyondHorizon: daysBetween(today, plannedFinish) >= horizonDays,
   };
 }
+
+/** `scheduleProposal` from one run's `today` over its horizon, for a need date and lead time. */
+export type ProposalScheduler = (needDate: string, leadTimeDays: number) => MrpProposalTiming;
+
+/**
+ * `scheduleProposal` for one run, timing each need date and lead time once (#400). A run times every proposal,
+ * and again for each component `canSupply` checks, yet they share at most a horizon of need dates per lead time:
+ * at ten times the worst case, about 80,000 calls over a few hundred keys, each parsing and formatting dates.
+ * The timing it returns is shared between calls, so callers copy it and never change it.
+ */
+export function proposalScheduler(today: string, horizonDays: number): ProposalScheduler {
+  const timings = new Map<string, MrpProposalTiming>();
+  return (needDate, leadTimeDays) => {
+    const key = `${needDate}/${leadTimeDays}`;
+    let timing = timings.get(key);
+    if (!timing) timings.set(key, (timing = scheduleProposal(needDate, leadTimeDays, today, horizonDays)));
+    return timing;
+  };
+}

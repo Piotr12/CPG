@@ -17,7 +17,7 @@ import { MRP_RANK_YIELD_MS } from "./mrp-run.service";
 // between pairs once `MRP_RANK_YIELD_MS` has passed, however few rows they wrote (#380 spec Q9).
 vi.mock("../../http/yield-to-event-loop", async (original) => {
   const actual = await original<typeof import("../../http/yield-to-event-loop")>();
-  return { yieldToEventLoop: vi.fn(actual.yieldToEventLoop) };
+  return { ...actual, yieldToEventLoop: vi.fn(actual.yieldToEventLoop) };
 });
 
 const NOW = new Date("2026-10-01T09:30:00.000Z");

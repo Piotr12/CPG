@@ -16,7 +16,7 @@ import type {
 } from "./mrp-inputs";
 import { planExcess } from "./excess/plan-excess";
 import { MRP_PROPOSAL_KINDS, type MrpBucket, type MrpInsufficientTransferStock, type MrpPlan } from "./mrp-result";
-import { planMrp } from "./plan-mrp";
+import { planMrp, planMrpSteps } from "./plan-mrp";
 import { safetyGap } from "./projection/safety-gap";
 
 const TODAY = "2026-10-01";
@@ -2004,6 +2004,26 @@ describe("planMrp: BOM explosion (E17-S01, #281)", () => {
       ["NO_FEASIBLE_BOM", "I", day(18)],
     ]);
     expect(actionsOf(result, "I")[0].rejectedBoms).toEqual([{ bom: "00000002", revision: 1, reason: "shortage", shortages: [{ material: "R", required: q("10"), available: 0n, shortage: q("10") }] }]);
+  });
+
+  it("plans in steps, pausing after reading its inputs and three times on each of F, I and R's levels, to planMrp's result (#400)", () => {
+    const snapshot = deepFreeze(
+      inputs({
+        orderLines: [order("F", "10", 20)],
+        planningParameters: [params("F", "make", 2, { materialType: "finished" }), params("I", "make", 3), params("R", "buy", 1)],
+        boms: [recipe("F", { I: "2" }), recipe("I", { R: "0.5" }, { bom: "00000002" })],
+      }),
+    );
+    const steps = planMrpSteps(snapshot, TODAY);
+    let pauses = 0;
+    let step = steps.next();
+    for (; !step.done; step = steps.next()) pauses += 1;
+    expect(pauses).toBe(1 + 3 * 3);
+    // The same plan, each plan's ranked shortages included.
+    expect(JSON.parse(JSON.stringify(step.value, (_key, value: unknown) => (typeof value === "bigint" ? `${value}` : value)))).toEqual(
+      JSON.parse(JSON.stringify(planMrp(snapshot, TODAY), (_key, value: unknown) => (typeof value === "bigint" ? `${value}` : value))),
+    );
+    expect(step.value.provisional.map(({ material }) => material)).toEqual(["F", "I"]);
   });
 
   it("MRP-028: a chain A → B → C terminates with each material planned once; a stored cycle X ↔ Y is reported on both and never exploded, and the rest still plans", () => {

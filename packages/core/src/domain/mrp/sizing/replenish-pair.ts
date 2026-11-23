@@ -3,10 +3,9 @@ import { isProcurementAllowed } from "../../planning-parameters/procurement";
 import type { MrpBom, MrpPlanningParameters, MrpRecordKind } from "../mrp-inputs";
 import type { MrpException, MrpMissingParametersReason, MrpProposal, MrpProposalRecipe } from "../mrp-result";
 import { validBoms } from "../explosion/choose-bom";
-import { MRP_HORIZON_DAYS } from "../projection/horizon";
 import { compareCodes } from "../projection/pairs";
 import { safetyGap } from "../projection/safety-gap";
-import { scheduleProposal } from "./schedule-proposal";
+import type { ProposalScheduler } from "./schedule-proposal";
 import { sizingBuckets, type SizingDay } from "./sizing-balance";
 import { sizeProposals, type SizedProposal } from "./size-proposals";
 
@@ -20,8 +19,8 @@ export interface PairContext {
   invalidSet: boolean;
   /** The current revisions of the output's active BOMs. */
   boms: readonly MrpBom[];
-  /** The run's first day, from which each proposal is timed (E16-S02). */
-  today: string;
+  /** Times each proposal from the run's first day (E16-S02), shared by the run's pairs (#400). */
+  schedule: ProposalScheduler;
   /** The material's cycle path when it is on a cycle of active BOMs (E17-S01, `bomLevels`). */
   cycle: string | undefined;
   /**
@@ -79,14 +78,14 @@ export interface Replenishment {
  * their need dates, its `provisional` proposals, which cover only what the provisional needs add. Rules 5
  * and 6 test both lists.
  *
- * Each proposal is timed by `scheduleProposal` (E16-S02) before the BOM check. The production order a
- * proposal becomes checks its BOM on its planned finish (`production-recipes.ts`), and a late proposal
- * finishes after its need date, so the check uses the same day (#317 review). An on-time proposal
- * finishes on its need date, as #280's spec had it.
+ * Each proposal is timed by `scheduleProposal` (E16-S02), through the run's `schedule`, before the BOM check.
+ * The production order a proposal becomes checks its BOM on its planned finish (`production-recipes.ts`), and
+ * a late proposal finishes after its need date, so the check uses the same day (#317 review). An on-time
+ * proposal finishes on its need date, as #280's spec had it.
  *
  * Nothing is guessed in their place, and each pair is decided alone, so no other pair changes.
  */
-export function replenishPair(pair: ReplenishedPair, { unreadable, parameters, invalidSet, boms, today, cycle, provisional }: PairContext): Replenishment {
+export function replenishPair(pair: ReplenishedPair, { unreadable, parameters, invalidSet, boms, schedule, cycle, provisional }: PairContext): Replenishment {
   const { material, location } = pair;
   const full = sizingBuckets(pair.buckets, null, []);
   if (unreadable) {
@@ -101,7 +100,7 @@ export function replenishPair(pair: ReplenishedPair, { unreadable, parameters, i
   if (!isProcurementAllowed(parameters.materialType, parameters.procurement)) return missing("raw-make");
   if (parameters.procurement === "make" && cycle !== undefined) return none({ code: "CYCLIC_BOM", material, location, path: cycle });
   const timed = (sized: SizedProposal[]) =>
-    sized.map((item): TimedProposal => ({ ...item, ...scheduleProposal(item.needDate, item.leadTimeDays, today, MRP_HORIZON_DAYS) }));
+    sized.map((item): TimedProposal => ({ ...item, ...schedule(item.needDate, item.leadTimeDays) }));
   if (parameters.procurement === "buy") return { proposals: timed(sizeProposals({ material, location, buckets: full }, parameters)), provisional: [], exception: null };
   const executable = sizeProposals({ material, location, buckets: provisional === null ? full : sizingBuckets(pair.buckets, provisional, []) }, parameters);
   const proposals = timed(executable);
