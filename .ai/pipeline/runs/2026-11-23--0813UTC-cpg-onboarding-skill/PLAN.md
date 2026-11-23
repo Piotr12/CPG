@@ -22,17 +22,19 @@ The worker brief is `WORKER-U2.md` in this folder.
 
 ## Progress
 
-- [ ] 1. U1: write `SKILL.md`
-- [ ] 2. U1: `onboarding.py`, prompt registration, `INSTRUCTIONS`, tests
-- [ ] 3. U1: `test_skill_text.py`
+- [x] 1. U1: write `SKILL.md`
+- [x] 2. U1: `onboarding.py`, prompt registration, `INSTRUCTIONS`, tests
+- [x] 3. U1: `test_skill_text.py`
 - [ ] 4. U2: `agent-downloads/` pure functions + tests
 - [ ] 5. U2: download routes + `outputFileTracingIncludes`
 - [ ] 6. U2: `/agents`, homepage section, EN/PL, help topic `ai-agents`
 - [ ] 7. U2: `tests/integration/agents.test.ts`
-- [ ] 8. Docs: `mcp/README.md`, `BACKWARD_COMPATIBILITY.md` §4 and §6, lessons
+- [x] 8. Docs: `mcp/README.md`, `BACKWARD_COMPATIBILITY.md` §4 and §6, lessons
 - [ ] 9. Acceptance run (spec A11) and evidence on the PR
 - [ ] 10. Full gate, spec `Status: implemented`, PR
 
 ## Log
 
 - 08:13: branch from `origin/main`, with the spec carried into `implemented/` (lesson 2026-11-02). A placeholder `SKILL.md` is committed so U2's paths exist.
+- 08:18: U1 done (0c702d70). The skill-text test found the regex missed the capitalised "Help topic" in the glossary, so it now matches case-insensitively. A `uv build` wheel contains `cpg_mcp/skills/cpg-onboarding/SKILL.md`. Docs committed (541cccd2): README, BACKWARD_COMPATIBILITY §4/§6, and the uvx-cache lesson.
+- 08:18: trial acceptance run started: a local standalone build on :3398 with the tiny Test dataset, a token created through the UI, and `claude -p` limited to the `cpg` MCP plus the skill.
