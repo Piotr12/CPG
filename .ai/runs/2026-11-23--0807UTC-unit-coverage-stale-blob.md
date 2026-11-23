@@ -42,7 +42,12 @@ turn it green (#399).
   `npm run build` 0 on the retry after Next.js's one-off `SecurityFatalError` advisory stop (lesson 2026-11-22; no
   upgrade run). No integration file touched; the change is CI-only, so no UI check.
 
+- Review (fresh subagent): approve, no blocker or major. Fixed its minor finding: the blobs' one-day retention, now
+  stated in the `ci.yml` comment and the lesson.
+- CI run 45137349062 (PR #406): attempt 1 all 13 checks green. Attempt 2 re-ran only `unit-timing`: the run then held
+  `unit-blob-timing-1` and `unit-blob-timing-2`, and `unit-coverage` printed `blob-reports/blob-timing-1.json` (the
+  stale blob it deleted), merged 688 test files and passed. That is #399's expected behaviour on a real re-run.
+
 ## Follow-ups
 
-- The re-run path itself can only be exercised on a real CI run: re-run one shard of this PR's run and check
-  `unit-coverage`'s log prints the deleted stale blob.
+- #394 still adds the old lesson; asked there to drop its bullet before merging.
