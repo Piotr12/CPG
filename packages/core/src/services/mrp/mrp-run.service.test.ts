@@ -274,6 +274,21 @@ describe("MrpRunService.run", () => {
     expect(await sql("select code from mrp_run order by code")).toEqual([{ code: "00000001" }, { code: "00000002" }]);
   });
 
+  it("deletes every row of the previous run whatever its ID, the edges of the ranges it deletes them in included (#400)", async () => {
+    const cabinet = await material("prod", "Cabinet");
+    await stock("prod", cabinet.id, PLANT, "1");
+    await run();
+    // The rows' first ID digits on both sides of each range's bounds, 4, 8 and c, and the lowest and highest IDs.
+    const edges = ["00000000", "3fffffff", "40000000", "7fffffff", "80000000", "bfffffff", "c0000000", "ffffffff"];
+    const rows = await sql<{ id: string }>("select id from mrp_daily_result order by date limit ?", [edges.length]);
+    for (const [index, { id }] of rows.entries()) await sql("update mrp_daily_result set id = ? where id = ?", [`${edges[index]}-0000-4000-8000-000000000000`, id]);
+
+    await run();
+
+    expect(await rowsOf("00000001")).toEqual([{ n: 0 }]);
+    expect(await rowsOf("00000002")).toEqual([{ n: 90 }]);
+  });
+
   it("stores the generation and the day it planned from, read when it runs", async () => {
     await sql("update tenant set generation = 7 where code = 'prod'");
     vi.setSystemTime(new Date("2026-12-15T23:59:00.000Z"));

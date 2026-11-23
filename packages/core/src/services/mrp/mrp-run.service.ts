@@ -5,7 +5,7 @@ import { exceptionParams, toStoredException } from "../../domain/mrp/exceptions/
 import { isMrpProvisionalCode, readStoredProvisional, toStoredProvisional } from "../../domain/mrp/provisional/stored-provisional";
 import type { MrpBucket, MrpResult } from "../../domain/mrp/mrp-result";
 import { isExecutableProposal } from "../../domain/mrp/acceptance/executable-proposal";
-import { planMrp } from "../../domain/mrp/plan-mrp";
+import { planMrpSteps } from "../../domain/mrp/plan-mrp";
 import { exceptionRejections, isMrpBomRejectionsCode, readBomRejections, toStoredBomRejections, type MrpBomRejectionView } from "../../domain/mrp/report/bom-rejections";
 import { planMarks, type StoredWarningRow } from "../../domain/mrp/report/plan-marks";
 import { isMrpShortageCode, readStoredShortages, toStoredShortages, type MrpShortageView } from "../../domain/mrp/report/stored-shortages";
@@ -20,7 +20,7 @@ import { formatSignedQuantity } from "../../domain/stock/signed-quantity";
 import { ConflictError, NotFoundError } from "../../http/errors";
 import { parseInput } from "../../http/parse-input";
 import { inRequestTransaction } from "../../http/request-transaction";
-import { yieldToEventLoop } from "../../http/yield-to-event-loop";
+import { runYielding, yieldToEventLoop } from "../../http/yield-to-event-loop";
 import { MRP_LATEST_PAGE_SIZE, mrpLatestQuerySchema } from "../../validators/mrp/mrp-latest.schema";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit } from "../audit/audit-recorder";
@@ -53,6 +53,20 @@ export const MRP_ROW_CHUNK = 500;
  * writes, so it yields between pairs once this long has passed, however few rows they wrote.
  */
 export const MRP_RANK_YIELD_MS = 50;
+
+/** Where the ranges of the previous run's row IDs split, by first hex digit. */
+const ID_BOUNDS = ["4", "8", "c"];
+/**
+ * The previous run's rows are deleted in four ranges of their random UUIDs, yielding between them (#400): at ten
+ * times the worst case, one delete of its ~98,000 rows was the run's longest stall once the engine yielded. The
+ * first range and the last are open, so every ID falls in exactly one. Each range is found through the tenant
+ * index, so each delete reads every row left: more ranges would shorten each stall but lengthen the run.
+ */
+const MRP_DELETE_RANGES = [
+  { $lt: ID_BOUNDS[0] },
+  ...ID_BOUNDS.slice(1).map((bound, index) => ({ $gte: ID_BOUNDS[index], $lt: bound })),
+  { $gte: ID_BOUNDS.at(-1)! },
+];
 
 export const MRP_RUN_NOT_FOUND = "No MRP run exists in this tenant yet.";
 export const MRP_RUN_SUPERSEDED = "This MRP run is not the latest one any more. Read the latest run from its first page.";
@@ -102,15 +116,17 @@ export class MrpRunService {
   async run(actor: AuditActor, { mode = "manual" }: { mode?: MrpRunMode } = {}): Promise<MrpRunAnswer> {
     await holdWriteGate(this.em);
     // Only the latest run keeps its results, proposals and exceptions (spec Q1). Deleting them before the insert keeps the indexes small.
-    await this.em.nativeDelete(MrpDailyResult, {});
-    await this.em.nativeDelete(MrpRecommendation, {});
-    await this.em.nativeDelete(MrpRunException, {});
-    // The deletes and the engine are each one synchronous stretch on better-sqlite3: yield between them, so the
-    // server reads its sockets (lesson 2026-10-24). The write gate is already held.
-    await yieldToEventLoop();
+    // Each delete is one synchronous stretch on better-sqlite3, and so is each of the engine's steps: yield after each,
+    // so the server reads its sockets (lesson 2026-10-24, #400). The write gate is already held.
+    for (const id of MRP_DELETE_RANGES) {
+      await this.em.nativeDelete(MrpDailyResult, { id });
+      await this.em.nativeDelete(MrpRecommendation, { id });
+      await this.em.nativeDelete(MrpRunException, { id });
+      await yieldToEventLoop();
+    }
     const today = new Date().toISOString().slice(0, 10);
     const { generation } = await this.tenantService.currentState(currentTenant(this.em)!);
-    const result = planMrp(await this.mrpSnapshotService.load(today), today);
+    const result = await runYielding(planMrpSteps(await this.mrpSnapshotService.load(today), today));
     await yieldToEventLoop();
     const highest = await this.em.findOne(MrpRun, {}, { orderBy: { code: "desc" }, fields: ["code"], disableIdentityMap: true });
     const code = nextSequentialId(highest?.code ?? null, { code: "MRP_RUN_IDS_EXHAUSTED", message: "This tenant has used every eight-digit MRP run ID." });

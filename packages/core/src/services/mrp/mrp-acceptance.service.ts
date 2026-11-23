@@ -1,9 +1,10 @@
 import { holdWriteGate, MrpRecommendation, MrpRun, type EntityManager } from "@cpg/db";
 import { isExecutableProposal } from "../../domain/mrp/acceptance/executable-proposal";
-import { planMrp } from "../../domain/mrp/plan-mrp";
+import { planMrpSteps } from "../../domain/mrp/plan-mrp";
 import { scheduleProposal } from "../../domain/mrp/sizing/schedule-proposal";
 import { formatDecimal } from "../../domain/quantities/decimal";
 import { ConflictError, NotFoundError } from "../../http/errors";
+import { runYielding } from "../../http/yield-to-event-loop";
 import type { AuditActor } from "../audit/actor";
 import type { MrpProposalDocumentService, MrpProposalDocumentView } from "./mrp-proposal-document.service";
 import type { MrpSnapshotService } from "./mrp-snapshot.service";
@@ -99,7 +100,8 @@ export class MrpAcceptanceService {
     if (!isExecutableProposal({ kind, bom, bomRevision })) throw new ConflictError(MRP_PROPOSAL_NOT_EXECUTABLE, "MRP_PROPOSAL_NOT_EXECUTABLE", { material, location, kind });
     const today = new Date().toISOString().slice(0, 10);
     if (run.startDate !== today) throw stale(proposal);
-    const fresh = planMrp(await this.mrpSnapshotService.load(today), today).proposals.find(
+    // Planned in steps, yielding between them as a run does (#400): the write gate is held.
+    const fresh = (await runYielding(planMrpSteps(await this.mrpSnapshotService.load(today), today))).proposals.find(
       (candidate) => candidate.material === material && candidate.location === location && candidate.needDate === needDate,
     );
     // The run started today (above), so the stored lead time times the proposal as the run showed it.

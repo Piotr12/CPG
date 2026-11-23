@@ -7,3 +7,14 @@
  * other bundles' connections wait too. Used by the Test reset's seed and by MRP runs.
  */
 export const yieldToEventLoop = (): Promise<void> => new Promise<void>((resolve) => setImmediate(resolve));
+
+/**
+ * Runs `steps` to its result, yielding to the event loop at each of its pauses, for synchronous work too long
+ * to run as one stretch: `planMrpSteps` pauses between the stages of an MRP plan (#400).
+ */
+export async function runYielding<T>(steps: Generator<void, T, void>): Promise<T> {
+  for (let step = steps.next(); ; step = steps.next()) {
+    if (step.done) return step.value;
+    await yieldToEventLoop();
+  }
+}

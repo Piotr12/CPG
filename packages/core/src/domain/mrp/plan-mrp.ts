@@ -33,7 +33,7 @@ import { bomLevels } from "./explosion/bom-levels";
 import { chooseBom, type BomChoice } from "./explosion/choose-bom";
 import { explodeProposal } from "./explosion/explode-proposal";
 import { replenishPair, type TimedProposal } from "./sizing/replenish-pair";
-import { scheduleProposal } from "./sizing/schedule-proposal";
+import { proposalScheduler } from "./sizing/schedule-proposal";
 import { planTransfers } from "./supply/transfers";
 import { lateRequisitionWarnings } from "./warnings/late-requisition";
 import { compareWarnings, overdueWarnings } from "./warnings/overdue";
@@ -118,6 +118,18 @@ interface PairDraft extends MrpLedger {
  * component ranks each share as its root requirement, through every level (PRD §04, MRP-044).
  */
 export function planMrp(inputs: MrpInputs, today: string): MrpResult {
+  const steps = planMrpSteps(inputs, today);
+  let step = steps.next();
+  while (!step.done) step = steps.next();
+  return step.value;
+}
+
+/**
+ * `planMrp` in steps (#400): it pauses after reading its inputs into pairs, and after each level's sizing, claims
+ * and plans, so a caller can let the event loop read its sockets in between (`yieldToEventLoop`). The plan is the
+ * same however long each pause lasts: nothing outside `inputs` is read.
+ */
+export function* planMrpSteps(inputs: MrpInputs, today: string): Generator<void, MrpResult, void> {
   const dates = horizonDates(today);
   const dayOf = new Map(dates.map((date, day) => [date, day]));
   const { levelOf, cycles } = bomLevels(inputs.boms);
@@ -188,6 +200,8 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
   const transfers = planTransfers(inputs.transfers, dates, pairOf);
   for (const item of transfers.dispatches) pairOf(item.material, item.location).transfersOut.push(item);
   for (const item of transfers.receipts) pairOf(item.material, item.location).transfersIn.push(item);
+  /** Times every proposal of the run, and each `canSupply` check, once per need date and lead time (#400). */
+  const schedule = proposalScheduler(today, MRP_HORIZON_DAYS);
   const parametersOf = new Map(inputs.planningParameters.map((set) => [pairKey(set.material, set.location), set]));
   const bomsOf = new Map<string, MrpBom[]>();
   for (const bom of inputs.boms) bomsOf.set(bom.output, [...(bomsOf.get(bom.output) ?? []), bom]);
@@ -235,12 +249,13 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
     const parameters = parametersOf.get(key);
     if (!parameters || unreadable.has(material) || invalidSets.has(key) || !isProcurementAllowed(parameters.materialType, parameters.procurement)) return false;
     if (parameters.procurement === "buy") return true;
-    const { plannedFinish } = scheduleProposal(date, parameters.leadTimeDays, today, MRP_HORIZON_DAYS);
+    const { plannedFinish } = schedule(date, parameters.leadTimeDays);
     return !cycles.has(material) && (bomsOf.get(material) ?? []).some((bom) => isUsableRevision(bom, bom.inactiveComponents.length === 0, plannedFinish));
   };
   const add = (byDay: Map<string, bigint[]>, key: string, day: number, quantity: bigint) => {
     (byDay.get(key) ?? byDay.set(key, dates.map(() => 0n)).get(key)!)[day] += quantity;
   };
+  yield;
   // A component's level is above every parent's, so a level's explosions only add to later levels, and its
   // pairs can all be sized before any of its proposals claims a component.
   for (const level of byLevel) {
@@ -254,7 +269,7 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
           parameters: parametersOf.get(key),
           invalidSet: invalidSets.has(key),
           boms: bomsOf.get(draft.material) ?? [],
-          today,
+          schedule,
           cycle: cycles.get(draft.material),
           provisional: provisionalOf.get(key) ?? null,
         },
@@ -271,6 +286,7 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
       makes.forEach((proposal, index) => sharesOf.set(proposal, pegged.proposals[index]));
       replenished.provisional.forEach((proposal, index) => sharesOf.set(proposal, pegged.provisional[index]));
     }
+    yield;
     const book = (proposal: TimedProposal) => {
       if (!proposal.beyondHorizon) pairs.get(pairKey(proposal.material, proposal.location))!.flows[dayOf.get(proposal.plannedFinish)!].proposedReceipts += proposal.quantity;
     };
@@ -336,6 +352,7 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
       keep(proposal, choice, ["no-feasible-bom"], choice.shortages.every((short) => canSupply(short.material, location, plannedStart)) ? "real" : "provisional");
       exceptions.push({ code: "NO_FEASIBLE_BOM", material, location, date, rejections: choice.rejected });
     }
+    yield;
     // What only provisional needs drive, after every claim of the level, in the same order: chosen, never claiming (E17-S03 Q7).
     for (const proposal of provisionalMakes.sort(claimOrder)) {
       const choice = choose(proposal);
@@ -348,6 +365,7 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
       // Like its warnings, no ranked shortage from balances an unreadable row left incomplete (#316, #380 spec Q11).
       plans.push(withShortages({ ...plan, buckets }, unreadable.has(plan.material)));
     }
+    yield;
   }
   plans.sort(comparePairs);
   proposals.sort((a, b) => comparePairs(a, b) || compareCodes(a.needDate, b.needDate));

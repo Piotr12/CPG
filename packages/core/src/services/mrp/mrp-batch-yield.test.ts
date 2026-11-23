@@ -15,7 +15,7 @@ import type { AuditActor } from "../audit/actor";
 // Counted, but still yielding: the batch must hand the event loop back after every document (#320 Q10).
 vi.mock("../../http/yield-to-event-loop", async (original) => {
   const actual = await original<typeof import("../../http/yield-to-event-loop")>();
-  return { yieldToEventLoop: vi.fn(actual.yieldToEventLoop) };
+  return { ...actual, yieldToEventLoop: vi.fn(actual.yieldToEventLoop) };
 });
 
 const NOW = new Date("2026-10-01T09:30:00.000Z");

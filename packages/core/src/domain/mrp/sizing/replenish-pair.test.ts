@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseDecimal } from "../../quantities/decimal";
 import type { MrpBom, MrpPlanningParameters } from "../mrp-inputs";
 import { replenishPair, type PairContext, type ReplenishedPair } from "./replenish-pair";
-import { scheduleProposal } from "./schedule-proposal";
+import { proposalScheduler, scheduleProposal } from "./schedule-proposal";
 import { sizeProposals, type SizedPair } from "./size-proposals";
 
 const q = (text: string) => parseDecimal(text)!;
@@ -43,7 +43,7 @@ const context = (overrides: Partial<PairContext> = {}): PairContext => ({
   parameters: set(),
   invalidSet: false,
   boms: [],
-  today: EARLY,
+  schedule: proposalScheduler(EARLY, 90),
   cycle: undefined,
   provisional: null,
   ...overrides,
@@ -164,7 +164,7 @@ describe("replenishPair", () => {
     // Run on 10-01 with a 7-day lead time: both needs (10-02, 10-04) are late and finish on 10-08,
     // the day the production order would check its BOM (#317 review).
     const late = set({ procurement: "make", leadTimeDays: 7 });
-    const lateContext = (boms: MrpBom[]) => context({ parameters: late, boms, today: "2026-10-01" });
+    const lateContext = (boms: MrpBom[]) => context({ parameters: late, boms, schedule: proposalScheduler("2026-10-01", 90) });
 
     it("checks a late proposal's BOM on its planned finish: a revision from after the need but by the finish covers it", () => {
       const replenished = replenishPair(SHORT, lateContext([bom("2026-10-06")]));

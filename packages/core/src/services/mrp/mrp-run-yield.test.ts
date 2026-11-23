@@ -9,7 +9,7 @@ import type { AppContainer } from "../../container/cradle";
 import { scopeForTenant } from "../../container/tenant-scope";
 import { migrateDatabase, toDbOptions } from "../../database";
 import { inRequestTransaction } from "../../http/request-transaction";
-import { yieldToEventLoop } from "../../http/yield-to-event-loop";
+import { runYielding, yieldToEventLoop } from "../../http/yield-to-event-loop";
 import type { AuditActor } from "../audit/actor";
 import { MRP_RANK_YIELD_MS } from "./mrp-run.service";
 
@@ -17,7 +17,7 @@ import { MRP_RANK_YIELD_MS } from "./mrp-run.service";
 // between pairs once `MRP_RANK_YIELD_MS` has passed, however few rows they wrote (#380 spec Q9).
 vi.mock("../../http/yield-to-event-loop", async (original) => {
   const actual = await original<typeof import("../../http/yield-to-event-loop")>();
-  return { yieldToEventLoop: vi.fn(actual.yieldToEventLoop) };
+  return { ...actual, yieldToEventLoop: vi.fn(actual.yieldToEventLoop), runYielding: vi.fn(actual.runYielding) };
 });
 
 const NOW = new Date("2026-10-01T09:30:00.000Z");
@@ -69,5 +69,31 @@ describe("a run's yields while it ranks shortages", () => {
     // One more yield per pair when every pair's ranking takes the whole allowance; the run's own yields are the same.
     expect(slow - still).toBe(PAIRS);
     expect(await orm.em.getConnection().execute("select count(*) as n from mrp_run_exception where exception_code = 'SHORTAGE'")).toEqual([{ n: PAIRS }]);
+  });
+});
+
+describe("a run's yields while it clears the previous run and plans (#400)", () => {
+  it("yields after each of the four ranges it deletes the previous run in, then plans in steps through runYielding", async () => {
+    const { cradle } = await scope();
+    await inRequestTransaction(cradle.em, () => cradle.mrpRunService.run(ANNA));
+    const order: string[] = [];
+    const nativeDelete = cradle.em.nativeDelete.bind(cradle.em);
+    vi.spyOn(cradle.em, "nativeDelete").mockImplementation((...args) => {
+      order.push("delete");
+      return nativeDelete(...args);
+    });
+    vi.mocked(yieldToEventLoop).mockImplementation(() => {
+      order.push("yield");
+      return new Promise<void>((resolve) => setImmediate(resolve));
+    });
+    vi.mocked(runYielding).mockClear();
+
+    await inRequestTransaction(cradle.em, () => cradle.mrpRunService.run(ANNA));
+
+    // Each range deletes the daily results, the recommendations and the exceptions, then the server reads its sockets.
+    expect(order.slice(0, 16)).toEqual(Array.from({ length: 4 }, () => ["delete", "delete", "delete", "yield"]).flat());
+    expect(order.slice(16)).not.toContain("delete");
+    expect(runYielding).toHaveBeenCalledTimes(1);
+    expect(await orm.em.getConnection().execute("select count(*) as n from mrp_daily_result")).toEqual([{ n: PAIRS * 90 }]);
   });
 });

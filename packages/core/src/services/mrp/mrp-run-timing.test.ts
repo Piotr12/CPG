@@ -9,7 +9,7 @@ import { createAppContainer } from "../../container/container";
 import type { AppContainer } from "../../container/cradle";
 import { scopeForTenant } from "../../container/tenant-scope";
 import { migrateDatabase, toDbOptions } from "../../database";
-import { planMrp } from "../../domain/mrp/plan-mrp";
+import { planMrpSteps } from "../../domain/mrp/plan-mrp";
 import { inRequestTransaction } from "../../http/request-transaction";
 import type { AuditActor } from "../audit/actor";
 import { MRP_BATCH_LIMIT } from "./mrp-batch.service";
@@ -189,7 +189,7 @@ function seed({ materials, locations, lines, forecasts, orders, requisitions, fu
 describe.each(SIZES)("an MRP run at the $name size", (size) => {
   let orm: Orm;
   let run: () => Promise<unknown>;
-  let engineOnly: () => Promise<number>;
+  let engineOnly: () => Promise<string>;
   let accept: (run: string, proposal: string) => Promise<unknown>;
   let rolledBack: <T>(work: (cradle: AppContainer["cradle"]) => Promise<T>) => Promise<T>;
   const testTimeout = 2 * RUNS * CI_FACTOR * size.budgetMs + 60_000;
@@ -224,13 +224,20 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
       });
       return result;
     };
-    // The engine is one synchronous call, so its own time is a stall the heartbeat also counts (#275).
+    // The engine's own time, and its longest step: the run yields between the steps, so the heartbeat counts that
+    // step's time as a stall, and before #400 it counted the whole engine's (#275).
     engineOnly = async () => {
       const { cradle } = await scopeForTenant(container, "prod");
       const inputs = await cradle.mrpSnapshotService.load(NOW.toISOString().slice(0, 10));
-      const started = performance.now();
-      planMrp(inputs, NOW.toISOString().slice(0, 10));
-      return performance.now() - started;
+      const steps = planMrpSteps(inputs, NOW.toISOString().slice(0, 10));
+      let total = 0;
+      let longest = 0;
+      for (let started = performance.now(), step = steps.next(); ; started = performance.now(), step = steps.next()) {
+        const took = performance.now() - started;
+        total += took;
+        longest = Math.max(longest, took);
+        if (step.done) return `planMrp alone ${total.toFixed(0)} ms, its longest step ${longest.toFixed(0)} ms`;
+      }
     };
   }, 120_000);
   afterAll(async () => {
@@ -243,6 +250,9 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     let fastest = Infinity;
     let longestStall = 0;
     for (let attempt = 0; attempt < RUNS; attempt += 1) {
+      // Each attempt is its own request, and the server reads its sockets between two requests: without this turn, one
+      // attempt's commit and the next one's first delete would count as one stall (#400).
+      await new Promise((resolve) => setImmediate(resolve));
       // A heartbeat on the event loop: the longest gap between its ticks is how long the run kept every other request waiting.
       let last = performance.now();
       let running = true;
@@ -287,7 +297,7 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
         `${size.lines} order lines, ${size.forecasts} forecasts, ` +
         `${size.orders + size.fullOrders} purchase orders with ${size.orders * ORDER_LINES + size.fullOrders * FULL_ORDER_LINES} lines, ${size.requisitions} requisitions, ` +
         `${size.productionOrders} production orders, ${size.transfers} transfers): ` +
-        `${fastest.toFixed(0)} ms fastest of ${RUNS}, longest event-loop stall ${longestStall.toFixed(0)} ms, planMrp alone ${engine.toFixed(0)} ms\n`,
+        `${fastest.toFixed(0)} ms fastest of ${RUNS}, longest event-loop stall ${longestStall.toFixed(0)} ms, ${engine}\n`,
     );
     const forecast = await orm.em.getConnection().execute<{ n: number }[]>("select count(*) as n from mrp_daily_result where forecast_demand <> '0.000000'");
     const safety = await orm.em.getConnection().execute<{ n: number }[]>("select count(*) as n from mrp_daily_result where safety_target = '40.000000'");
@@ -428,7 +438,7 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     const exceptions = await count("select count(*) as n from mrp_run_exception");
     process.stdout.write(
       `MRP run, worst case for proposals, ${size.name} (${rows} daily rows, ${recommendations} recommendations and ${infeasible} infeasible Make proposals, ${await count("select count(*) as n from mrp_run_exception where exception_code = 'SHORTAGE'")} pairs with shortages, ${exceptions} mrp_run_exception rows, ${size.lines + size.materials * days} order lines): ` +
-        `${fastest.toFixed(0)} ms fastest of ${RUNS}, longest event-loop stall ${longestStall.toFixed(0)} ms, planMrp alone ${(await engineOnly()).toFixed(0)} ms\n`,
+        `${fastest.toFixed(0)} ms fastest of ${RUNS}, longest event-loop stall ${longestStall.toFixed(0)} ms, ${await engineOnly()}\n`,
     );
     // Every day but, for some materials, today: overdue purchase-order lines all land today and can cover it.
     expect(proposals).toBeGreaterThanOrEqual(size.materials * (days - 1));
