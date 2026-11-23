@@ -10,7 +10,9 @@ Sign in to CPG, open **API tokens** in your account card (`/admin/tokens`), crea
 
 ## 2. Add the server to your agent
 
-You need [uv](https://docs.astral.sh/uv/). `uvx` fetches and runs the server; nothing else is installed.
+The easiest way is CPG's own guide: open **Use CPG from an AI agent** on CPG's homepage, or go to `/agents`. It gives the commands for Windows, macOS and Linux, already filled in with that CPG's address. The commands install the server from the package CPG itself serves, `<CPG>/downloads/cpg-mcp-{hash}.zip`, so you need neither git nor a checkout. The hash changes with every new version of the package, and the guide always shows the current one. An old hash redirects to the current package.
+
+The commands below install from GitHub instead, which needs git. You need [uv](https://docs.astral.sh/uv/). `uvx` fetches and runs the server; nothing else is installed.
 
 **Claude Code**
 
@@ -45,6 +47,15 @@ tool_timeout_sec = 300
 ```
 
 From a checkout, use `uvx --from ./mcp cpg-mcp` instead.
+
+## 3. Teach the agent how a planner works
+
+The server ships an onboarding skill, `cpg_mcp/skills/cpg-onboarding/SKILL.md`. It covers orientation, a glossary, the daily planning loop, CPG's hard rules and the safety rules. There are two ways to give it to the agent:
+
+- **As a skill.** Download it from CPG's homepage (`/downloads/cpg-onboarding-skill.zip`) and unpack it into the agent's skills folder: `~/.claude/skills/` for Claude Code. `/agents` gives a one-line install for each OS.
+- **As the MCP prompt `cpg_onboarding`**, for any client, with nothing to install. In Claude Code it is the command `/mcp__cpg__cpg_onboarding`.
+
+Both are the same file. The server reads it at startup and keeps no second copy.
 
 ## Configuration
 
