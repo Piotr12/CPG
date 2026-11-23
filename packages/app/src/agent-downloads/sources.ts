@@ -14,8 +14,11 @@ export const SKILL_SOURCE = "cpg_mcp/skills/cpg-onboarding/SKILL.md";
 /** The package files beside `cpg_mcp/` that hatchling needs to build it: the metadata and its readme. */
 const PACKAGE_METADATA = ["pyproject.toml", "README.md"];
 
-/** Python's byte-code caches: a developer's `mcp/` has them, the image doesn't, and neither installs them. */
-const isCache = (name: string) => name === "__pycache__" || name.endsWith(".pyc");
+/**
+ * Files that are never part of the package: Python's byte-code caches and dotfiles (`.DS_Store`, an editor's
+ * swap file). A developer's `mcp/` has them, the image doesn't, and neither installs them.
+ */
+const isCache = (name: string) => name === "__pycache__" || name.endsWith(".pyc") || name.startsWith(".");
 
 /** Every file under `dir`, as paths relative to `root` with `/` separators, caches skipped. */
 function filesUnder(root: string, dir: string): string[] {

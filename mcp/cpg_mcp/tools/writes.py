@@ -106,7 +106,7 @@ def write_tools() -> list[ActionTool]:
         ),
         ActionTool(
             "cpg_reverse",
-            "Reverses a posting today, whole, with a reason: a stock movement (goods receipt, goods issue or correction),"
+            "Reverses a posting today, with a reason: one stock movement (one line of a goods receipt, goods issue or correction),"
             " a production completion (id is the order, completionId the completion) or a transfer posting (id is the"
             " transfer, postingId the posting).",
             {

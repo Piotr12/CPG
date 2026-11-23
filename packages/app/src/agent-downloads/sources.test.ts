@@ -6,7 +6,7 @@ import { FIXTURE_SKILL, fixturePackage } from "./mcp-package-fixture";
 import { mcpPackageFiles, skillFiles } from "./sources";
 
 describe("mcpPackageFiles", () => {
-  it("lists pyproject.toml, README.md and cpg_mcp/** under cpg-mcp/, skipping byte-code caches, tests and the lock file", () => {
+  it("lists pyproject.toml, README.md and cpg_mcp/** under cpg-mcp/, skipping byte-code caches, dotfiles, tests and the lock file", () => {
     const files = mcpPackageFiles(fixturePackage());
 
     expect(files.map(({ path }) => path).sort()).toEqual([

@@ -91,7 +91,7 @@ function skillInstall(os: AgentOs, origin: string, agent: SkillAgent): { command
   if (os === "windows") {
     const folder = ["$HOME", ...segments].join("\\");
     return {
-      command: `New-Item -ItemType Directory -Force "${folder}" | Out-Null; Invoke-WebRequest ${url} -OutFile "${folder}\\SKILL.md"`,
+      command: `New-Item -ItemType Directory -Force "${folder}" | Out-Null; Invoke-WebRequest -UseBasicParsing ${url} -OutFile "${folder}\\SKILL.md"`,
       folder: `${["$HOME", ...SKILL_HOMES[agent]].join("\\")}\\`,
     };
   }

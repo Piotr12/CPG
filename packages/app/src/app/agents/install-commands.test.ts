@@ -115,7 +115,7 @@ describe("installCommands", () => {
 
     expect(skill.claude).toEqual({
       command:
-        'New-Item -ItemType Directory -Force "$HOME\\.claude\\skills\\cpg-onboarding" | Out-Null; Invoke-WebRequest https://cpg.baby/downloads/cpg-onboarding/SKILL.md -OutFile "$HOME\\.claude\\skills\\cpg-onboarding\\SKILL.md"',
+        'New-Item -ItemType Directory -Force "$HOME\\.claude\\skills\\cpg-onboarding" | Out-Null; Invoke-WebRequest -UseBasicParsing https://cpg.baby/downloads/cpg-onboarding/SKILL.md -OutFile "$HOME\\.claude\\skills\\cpg-onboarding\\SKILL.md"',
       folder: "$HOME\\.claude\\skills\\",
     });
     expect(skill.codex.folder).toBe("$HOME\\.agents\\skills\\");

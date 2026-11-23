@@ -26,5 +26,7 @@ export function fixturePackage(): string {
   write("cpg_mcp/__pycache__/__init__.cpython-312.pyc", "cache");
   write("cpg_mcp/tools/__pycache__/__init__.cpython-312.pyc", "cache");
   write("cpg_mcp/stray.pyc", "cache");
+  write("cpg_mcp/.DS_Store", "finder");
+  write("cpg_mcp/tools/.server.py.swp", "swap");
   return root;
 }

@@ -170,7 +170,7 @@ const en: Record<HelpTopicId, HelpText> = {
     body: [
       "An AI agent such as Claude Code or Codex can work in CPG for you through CPG's MCP server, a small program that runs on your computer and calls CPG's API with your API token. The agent can do exactly what your account can, in Test and Prod, and its changes are audited under your account and the token's name. Revoke the token to cut it off.",
       "The onboarding skill teaches the agent how a planner works in CPG: the daily planning loop, the rules (a posting is corrected by reversing it, never by editing it) and when to ask you first, before any change in Prod. An agent without skills gets the same text from the MCP server as the prompt cpg_onboarding.",
-      "The homepage offers both downloads. Use CPG from an AI agent, linked beside them, is the installation guide: its commands for Windows, macOS or Linux install uv, add the server to Claude Code, Codex or any other MCP client, and install the skill. The commands already point at the CPG that showed them; replace <token> with your token's secret.",
+      "The homepage offers both downloads. How to install, linked beside them, opens the installation guide: its commands for Windows, macOS or Linux install uv, add the server to Claude Code, Codex or any other MCP client, and install the skill. The commands already point at the CPG that showed them; replace <token> with your token's secret.",
     ],
   },
   "test-dataset-week": {
